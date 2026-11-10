@@ -6,7 +6,7 @@ Tracks the PRD (v1.0, 10 Nov 2026) phase by phase. Each item is one commit.
 ## Phase 0 — Foundation
 
 - [x] 0.1 Scaffold Expo SDK 58 app (Expo Router, TypeScript, React 19.3, RN 0.88)
-- [ ] 0.2 Project config: app identity, bundle id, line endings, test runner
+- [x] 0.2 Project config: app identity, bundle id, line endings, test runner
 - [ ] 0.3 Design tokens (Paper/Forest/Sage/Sand/Gold, dark mode) + Literata font
 - [ ] 0.4 Base UI components (FaithText, FaithButton, IconButton, Card, EmptyState, Screen)
 - [ ] 0.5 Navigation shell: Today / Bible / Sermons / Journal / Library tabs + Settings
