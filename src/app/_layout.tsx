@@ -1,15 +1,22 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider, type Theme as NavigationTheme } from 'expo-router';
+import {
+  DarkTheme,
+  DefaultTheme,
+  router,
+  Stack,
+  ThemeProvider,
+  usePathname,
+  type Theme as NavigationTheme,
+} from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo } from 'react';
-import { Appearance } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Appearance, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ErrorState, Screen } from '@/components/ui';
-import { db } from '@/db/client';
-import migrations from '@/db/migrations/migrations';
+import { prepareDatabase } from '@/db/client';
+import { useDatabaseMigrations } from '@/db/migrate';
 import { prepareBibleDatabase } from '@/features/bible/db/connection';
 import { initNotifications } from '@/features/reminders/notifications';
 import { initSync } from '@/features/sync/init';
@@ -53,6 +60,12 @@ function useNavigationTheme(): NavigationTheme {
 function RootStack() {
   const { colors, fonts } = useTheme();
   const onboardingCompleted = usePreferences((s) => s.onboardingCompleted);
+  const pathname = usePathname();
+
+  // The Protected guard alone falls back to an arbitrary first route; send first-run users to onboarding.
+  useEffect(() => {
+    if (!onboardingCompleted && !pathname.startsWith('/onboarding')) router.replace('/onboarding');
+  }, [onboardingCompleted, pathname]);
 
   return (
     <Stack
@@ -65,7 +78,7 @@ function RootStack() {
         contentStyle: { backgroundColor: colors.background },
       }}>
       <Stack.Protected guard={!onboardingCompleted}>
-        <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen name="onboarding/index" options={{ headerShown: false, gestureEnabled: false }} />
       </Stack.Protected>
       <Stack.Protected guard={onboardingCompleted}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Home' }} />
@@ -105,23 +118,38 @@ function DatabaseErrorScreen({ error }: { error: Error }) {
   );
 }
 
-export default function RootLayout() {
-  const fontsReady = useFaithFonts();
-  const { success: migrated, error: migrationError } = useMigrations(db, migrations);
-  const hydrated = usePreferencesHydrated();
-  const themePreference = usePreferences((s) => s.themePreference);
-  const navigationTheme = useNavigationTheme();
-  const { scheme } = useTheme();
+interface DatabaseState {
+  isReady: boolean;
+  error: Error | null;
+}
+
+/** Waits for `prepareDatabase()` (immediate on native; warms the SQLite worker on web). */
+function useDatabaseReady(): DatabaseState {
+  const [state, setState] = useState<DatabaseState>({ isReady: false, error: null });
+  useEffect(() => {
+    let isActive = true;
+    // Web: SQLite runs in one shared worker and sync calls time out while it is busy, so let the
+    // one-off 13 MB Bible copy finish before opening the user database. Native opens instantly.
+    const bibleFirst =
+      Platform.OS === 'web' ? prepareBibleDatabase().catch(() => undefined) : Promise.resolve();
+    bibleFirst.then(prepareDatabase).then(
+      () => isActive && setState({ isReady: true, error: null }),
+      (error: unknown) => isActive && setState({ isReady: false, error: error instanceof Error ? error : new Error(String(error)) }),
+    );
+    return () => {
+      isActive = false;
+    };
+  }, []);
+  return state;
+}
+
+/** Runs migrations, then starts background services and shows the app (or a database error). */
+function MigratedApp() {
+  const { success: migrated, error: migrationError } = useDatabaseMigrations();
 
   useEffect(() => {
-    Appearance.setColorScheme(themePreference === 'system' ? 'unspecified' : themePreference);
-  }, [themePreference]);
-
-  const ready = fontsReady && hydrated && (migrated || migrationError !== undefined);
-
-  useEffect(() => {
-    if (ready) void SplashScreen.hideAsync();
-  }, [ready]);
+    if (migrated || migrationError) void SplashScreen.hideAsync();
+  }, [migrated, migrationError]);
 
   // Background services start only after the local database is migrated.
   useEffect(() => {
@@ -135,14 +163,37 @@ export default function RootLayout() {
     };
   }, [migrated]);
 
-  if (!ready) return null;
+  if (migrationError) return <DatabaseErrorScreen error={migrationError} />;
+  if (!migrated) return null;
+  return <RootStack />;
+}
+
+export default function RootLayout() {
+  const fontsReady = useFaithFonts();
+  const hydrated = usePreferencesHydrated();
+  const database = useDatabaseReady();
+  const themePreference = usePreferences((s) => s.themePreference);
+  const navigationTheme = useNavigationTheme();
+  const { scheme } = useTheme();
+
+  useEffect(() => {
+    // Not implemented by react-native-web; the web preview simply follows the system theme.
+    if (typeof Appearance.setColorScheme !== 'function') return;
+    Appearance.setColorScheme(themePreference === 'system' ? 'unspecified' : themePreference);
+  }, [themePreference]);
+
+  useEffect(() => {
+    if (database.error) void SplashScreen.hideAsync();
+  }, [database.error]);
+
+  if (!fontsReady || !hydrated || (!database.isReady && !database.error)) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider value={navigationTheme}>
           <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-          {migrationError ? <DatabaseErrorScreen error={migrationError} /> : <RootStack />}
+          {database.error ? <DatabaseErrorScreen error={database.error} /> : <MigratedApp />}
         </ThemeProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>

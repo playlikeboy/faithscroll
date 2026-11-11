@@ -15,3 +15,11 @@ export const db = drizzle(expoDb, { schema });
 
 // Compile-time check that the expo database satisfies the shared repository type.
 export const appDb: AppDatabase = db;
+
+/**
+ * Resolves when `db` is usable. Native SQLite opens synchronously above, so this is immediate;
+ * the web build (client.web.ts) has to warm its SQLite worker first.
+ */
+export function prepareDatabase(): Promise<void> {
+  return Promise.resolve();
+}
