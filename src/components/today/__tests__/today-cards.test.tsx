@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import type { Href } from 'expo-router';
 
 import { ContinueReadingCard } from '@/components/today/continue-reading-card';
 import { DailyIntention } from '@/components/today/daily-intention';
@@ -184,7 +185,7 @@ describe('RecentActivityList', () => {
     icon: 'sermons',
     title: 'The Power of Forgiveness',
     subtitle: 'Sermon · Pastor John',
-    href: '/sermons/1',
+    href: '/sermons/1' as Href,
   };
 
   test('shows a calm placeholder when empty', async () => {
