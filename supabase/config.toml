@@ -93,5 +93,11 @@ deno_version = 2
 # The platform verifies the caller's JWT before the function runs; the function verifies it again.
 verify_jwt = true
 
+[functions.revenuecat-webhook]
+# RevenueCat cannot send a Supabase JWT. The function authenticates every call itself with the
+# REVENUECAT_WEBHOOK_AUTH secret (Authorization header configured in the RevenueCat dashboard).
+# All ai-* functions keep the default JWT verification.
+verify_jwt = false
+
 [analytics]
 enabled = false

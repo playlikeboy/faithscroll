@@ -1,8 +1,9 @@
 /**
  * Hand-written types for the tables created by the backend-auth migrations
  * (`supabase/migrations/20261111000100_core.sql`, `…000110_sync_mirrors.sql`).
+ * plus `subscriptions` / `has_active_plus` from `…000300_billing.sql`.
  * Keep in sync with the SQL. Regenerate-able with `supabase gen types typescript` once a project
- * is linked; other agents' tables (AI, subscriptions) are intentionally not listed here.
+ * is linked; the AI tables (…000200_ai.sql) are typed by the AI service layer instead.
  * Generated `search_vector` columns are omitted (never selected by the app).
  */
 
@@ -68,6 +69,35 @@ export type Database = {
           ai_processing_consent_at?: Timestamp | null;
         };
         Update: Partial<Database['public']['Tables']['user_preferences']['Insert']>;
+        Relationships: [];
+      };
+      /** Plus entitlement mirrored from RevenueCat (migration 20261111000300_billing.sql). Read-only for users. */
+      subscriptions: {
+        Row: {
+          user_id: string;
+          entitlement: string;
+          product_id: string | null;
+          store: string | null;
+          environment: string | null;
+          period_type: string | null;
+          expires_at: Timestamp | null;
+          last_event_id: string | null;
+          last_event_at: Timestamp | null;
+          created_at: Timestamp;
+          updated_at: Timestamp;
+        };
+        Insert: {
+          user_id: string;
+          entitlement?: string;
+          product_id?: string | null;
+          store?: string | null;
+          environment?: string | null;
+          period_type?: string | null;
+          expires_at?: Timestamp | null;
+          last_event_id?: string | null;
+          last_event_at?: Timestamp | null;
+        };
+        Update: Partial<Database['public']['Tables']['subscriptions']['Insert']>;
         Relationships: [];
       };
       highlights: Mirror<{ id: string; verse_id: number; color: string }>;
@@ -216,7 +246,10 @@ export type Database = {
       >;
     };
     Views: { [_ in never]: never };
-    Functions: { [_ in never]: never };
+    Functions: {
+      /** Service role only (EXECUTE is not granted to app users). */
+      has_active_plus: { Args: { p_user_id: string }; Returns: boolean };
+    };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
   };
