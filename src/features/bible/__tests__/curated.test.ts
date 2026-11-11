@@ -63,6 +63,12 @@ describe('Verse of the Day rotation', () => {
     );
   });
 
+  test('rotates through the list in order, matching parseReference for every entry', () => {
+    VERSE_OF_THE_DAY_REFERENCES.forEach((ref, index) => {
+      expect({ ref, range: getVerseOfTheDay(new Date(2026, 0, 1 + index)) }).toEqual({ ref, range: parseReference(ref) });
+    });
+  });
+
   test('consecutive days differ', () => {
     for (let day = 1; day < 60; day += 1) {
       expect(getVerseOfTheDay(new Date(2026, 0, day))).not.toEqual(getVerseOfTheDay(new Date(2026, 0, day + 1)));
@@ -85,6 +91,9 @@ describe('Discover topics', () => {
     DISCOVER_TOPIC_SOURCES.forEach((source, index) => {
       expect(source.cards.filter((card) => parseReference(card.ref) === null).map((card) => card.ref)).toEqual([]);
       expect(DISCOVER_TOPICS[index].cards).toHaveLength(source.cards.length);
+      source.cards.forEach(({ ref }, cardIndex) => {
+        expect({ ref, range: DISCOVER_TOPICS[index].cards[cardIndex].range }).toEqual({ ref, range: parseReference(ref) });
+      });
     });
   });
 

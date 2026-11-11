@@ -3,10 +3,9 @@
  * Owned by the bible-data agent; exported signatures are a shared contract.
  * Content lives in ./data (references as text, checked against the bundled Bible by tests).
  */
-import { getBook } from './books';
+import { BOOKS, getBook } from './books';
 import { DISCOVER_TOPIC_SOURCES } from './data/discover-topics';
 import { VERSE_OF_THE_DAY_REFERENCES } from './data/verse-of-the-day';
-import { parseReference } from './reference';
 import type { DiscoverCard, DiscoverTopic, VerseRange } from './types';
 
 const MS_PER_DAY = 86_400_000;
@@ -15,7 +14,26 @@ const FALLBACK_VERSE: VerseRange = {
   end: { bookId: 19, chapter: 23, verse: 1 },
 };
 
-const VERSE_OF_THE_DAY: readonly VerseRange[] = VERSE_OF_THE_DAY_REFERENCES.map(parseReference).filter(
+/**
+ * Curated data uses one fixed format, "<Book name> C:V" or "<Book name> C:V-V", read here without
+ * the general parser so this module has no runtime dependency on reference.ts.
+ * curated.test.ts checks that every entry matches `parseReference` and exists in bible.db.
+ */
+const CURATED_REFERENCE = /^(.+) (\d+):(\d+)(?:-(\d+))?$/;
+
+function parseCuratedReference(reference: string): VerseRange | null {
+  const match = CURATED_REFERENCE.exec(reference);
+  if (!match) return null;
+  const [, name, chapter, verse, endVerse = verse] = match;
+  const book = BOOKS.find((candidate) => candidate.name === name || (candidate.code === 'PSA' && name === 'Psalm'));
+  if (!book) return null;
+  return {
+    start: { bookId: book.id, chapter: Number(chapter), verse: Number(verse) },
+    end: { bookId: book.id, chapter: Number(chapter), verse: Number(endVerse) },
+  };
+}
+
+const VERSE_OF_THE_DAY: readonly VerseRange[] = VERSE_OF_THE_DAY_REFERENCES.map(parseCuratedReference).filter(
   (range): range is VerseRange => range !== null,
 );
 
@@ -39,7 +57,7 @@ function cardId(topicId: string, range: VerseRange): string {
 
 function toCards(topicId: string, sources: readonly { ref: string; context: string }[]): DiscoverCard[] {
   return sources.flatMap(({ ref, context }) => {
-    const range = parseReference(ref);
+    const range = parseCuratedReference(ref);
     return range ? [{ id: cardId(topicId, range), range, context }] : [];
   });
 }
