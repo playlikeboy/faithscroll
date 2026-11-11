@@ -65,6 +65,20 @@ export interface InitNotificationsOptions {
   skipReconcile?: boolean;
 }
 
+/**
+ * Plan reminders live in the user database. Required lazily so importing this contract never opens
+ * the native database (other features import it in their unit tests).
+ */
+function reconcilePlanReminders(): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const startup = require('@/features/plans/startup') as typeof import('@/features/plans/startup');
+    startup.reconcilePlanRemindersOnStartup().catch((error: unknown) => logger.error('Restoring plan reminders failed', error));
+  } catch (error) {
+    logger.error('Restoring plan reminders failed', error);
+  }
+}
+
 function responseKey(response: Notifications.NotificationResponse): string {
   return `${response.notification.request.identifier}:${response.notification.date}`;
 }
@@ -105,6 +119,7 @@ export function initNotifications(options: InitNotificationsOptions = {}): () =>
 
   if (!options.skipReconcile) {
     reconcileDailyReminder().catch((error: unknown) => logger.error('Restoring the daily reminder failed', error));
+    reconcilePlanReminders();
   }
 
   return () => {

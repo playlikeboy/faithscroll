@@ -19,6 +19,7 @@ import {
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 
 jest.mock('../daily-reminder', () => ({ reconcileDailyReminder: jest.fn(async () => undefined) }));
+jest.mock('@/features/plans/startup', () => ({ reconcilePlanRemindersOnStartup: jest.fn(async () => undefined) }));
 
 jest.mock('expo-notifications', () => ({
   AndroidImportance: { DEFAULT: 5 },
@@ -54,6 +55,12 @@ function response(url: unknown, options: { action?: string; id?: string; date?: 
 }
 
 const future = () => new Date(Date.now() + 60 * 60 * 1000);
+
+beforeAll(() => {
+  // Failure paths log through `logger` by design; keep the test output readable.
+  jest.spyOn(console, 'error').mockImplementation(() => undefined);
+  jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -303,11 +310,14 @@ describe('initNotifications', () => {
     jest.useRealTimers();
   });
 
-  it('reconciles the daily reminder at startup', () => {
+  it('reconciles the daily and plan reminders at startup', () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { reconcileDailyReminder } = require('../daily-reminder') as { reconcileDailyReminder: jest.Mock };
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const startup = require('@/features/plans/startup') as { reconcilePlanRemindersOnStartup: jest.Mock };
     const stop = initNotifications({ navigate: jest.fn() });
     expect(reconcileDailyReminder).toHaveBeenCalled();
+    expect(startup.reconcilePlanRemindersOnStartup).toHaveBeenCalled();
     stop();
   });
 });
