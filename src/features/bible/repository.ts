@@ -3,6 +3,7 @@
  * Read-only access to the bundled Bible database (assets/bible/bible.db).
  * Exported names and signatures are a shared contract: implementations may change, signatures may not.
  */
+import { chapterVerseCount } from './data/chapter-verse-count';
 import type { BibleSearchOptions, BibleSearchResult, Translation, Verse, VerseRange } from './types';
 
 export const DEFAULT_TRANSLATION: Translation = {
@@ -38,7 +39,7 @@ export async function getCrossReferences(_verseId: number, _limit?: number): Pro
   return [];
 }
 
-/** Number of verses in a chapter (0 if unknown). */
-export function getVerseCount(_bookId: number, _chapter: number): number {
-  return 0;
+/** Number of verses in a chapter (0 if unknown). Synchronous: reads the generated table, not the DB. */
+export function getVerseCount(bookId: number, chapter: number): number {
+  return chapterVerseCount(bookId, chapter);
 }
