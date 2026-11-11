@@ -196,30 +196,36 @@ function splitReferences(text: string, out: NoteInline[]): void {
   appendText(out, text.slice(cursor));
 }
 
+export interface ParseOptions {
+  /** Detect Scripture references (default true). Skip it when only plain text is needed. */
+  detectReferences?: boolean;
+}
+
 /** Split a plain text run into text, timestamp and Scripture reference nodes. */
-function splitTokens(text: string, out: NoteInline[]): void {
+function splitTokens(text: string, out: NoteInline[], detectReferences: boolean): void {
+  const pushText = detectReferences ? splitReferences : (slice: string, target: NoteInline[]) => appendText(target, slice);
   let cursor = 0;
   for (const token of scanTimestamps(text)) {
-    splitReferences(text.slice(cursor, token.index), out);
+    pushText(text.slice(cursor, token.index), out);
     out.push({ type: 'timestamp', text: token.text, positionMs: token.positionMs });
     cursor = token.index + token.length;
   }
-  splitReferences(text.slice(cursor), out);
+  pushText(text.slice(cursor), out);
 }
 
-function tokenize(nodes: readonly NoteInline[]): NoteInline[] {
+function tokenize(nodes: readonly NoteInline[], detectReferences: boolean): NoteInline[] {
   const out: NoteInline[] = [];
   for (const node of nodes) {
-    if (node.type === 'text') splitTokens(node.text, out);
-    else if ('children' in node) out.push({ ...node, children: tokenize(node.children) });
+    if (node.type === 'text') splitTokens(node.text, out, detectReferences);
+    else if ('children' in node) out.push({ ...node, children: tokenize(node.children, detectReferences) });
     else out.push(node);
   }
   return out;
 }
 
 /** Parse one block's inline content. */
-export function parseInline(text: string): NoteInline[] {
-  return tokenize(parseEmphasis(text));
+export function parseInline(text: string, options: ParseOptions = {}): NoteInline[] {
+  return tokenize(parseEmphasis(text), options.detectReferences ?? true);
 }
 
 /** Flatten inline nodes to plain text (timestamps as `mm:ss`). */

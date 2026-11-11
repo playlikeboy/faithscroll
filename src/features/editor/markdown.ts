@@ -9,9 +9,9 @@
  * Inline: `**bold**`, `*italic*` / `_italic_`, `==highlight==`, `[mm:ss]` / `[h:mm:ss]`
  * timestamps and Scripture references (see `inline.ts`).
  */
-import { inlineToPlainText, parseInline, scanTimestamps, type NoteInline } from './inline';
+import { inlineToPlainText, parseInline, scanTimestamps, type NoteInline, type ParseOptions } from './inline';
 
-export { parseInline, scanTimestamps, type NoteInline, type TimestampToken } from './inline';
+export { parseInline, scanTimestamps, type NoteInline, type ParseOptions, type TimestampToken } from './inline';
 
 export type HeadingLevel = 1 | 2 | 3;
 
@@ -61,24 +61,25 @@ interface Pending {
   start: number;
 }
 
-function finish(pending: Pending): NoteBlock {
+function finish(pending: Pending, options: ParseOptions): NoteBlock {
+  const inline = (text: string) => parseInline(text, options);
   switch (pending.kind) {
     case 'paragraph':
-      return { type: 'paragraph', children: parseInline(pending.lines.join('\n')) };
+      return { type: 'paragraph', children: inline(pending.lines.join('\n')) };
     case 'bullet':
-      return { type: 'bulletList', items: pending.lines.map(parseInline) };
+      return { type: 'bulletList', items: pending.lines.map(inline) };
     case 'numbered':
-      return { type: 'numberedList', start: pending.start, items: pending.lines.map(parseInline) };
+      return { type: 'numberedList', start: pending.start, items: pending.lines.map(inline) };
   }
 }
 
 /** Parse Markdown-lite content into blocks. */
-export function parseNote(content: string): NoteBlock[] {
+export function parseNote(content: string, options: ParseOptions = {}): NoteBlock[] {
   if (typeof content !== 'string' || content.length === 0) return [];
   const blocks: NoteBlock[] = [];
   let pending: Pending | null = null;
   const flush = () => {
-    if (pending) blocks.push(finish(pending));
+    if (pending) blocks.push(finish(pending, options));
     pending = null;
   };
   const extend = (kind: Pending['kind'], text: string, start = 1) => {
@@ -98,7 +99,7 @@ export function parseNote(content: string): NoteBlock[] {
         break;
       case 'heading':
         flush();
-        blocks.push({ type: 'heading', level: line.level, children: parseInline(line.text) });
+        blocks.push({ type: 'heading', level: line.level, children: parseInline(line.text, options) });
         break;
       case 'bullet':
         extend('bullet', line.text);
@@ -131,7 +132,7 @@ function blockToPlainText(block: NoteBlock): string {
  * newline; list markers are dropped; timestamps read as `04:32`.
  */
 export function toPlainText(content: string): string {
-  return parseNote(content).map(blockToPlainText).join('\n');
+  return parseNote(content, { detectReferences: false }).map(blockToPlainText).join('\n');
 }
 
 /** Every valid `[mm:ss]` / `[h:mm:ss]` token in document order. */

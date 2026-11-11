@@ -205,6 +205,15 @@ describe('parseInline tokens', () => {
     });
   });
 
+  test('can skip reference detection', () => {
+    const nodes = parseInline('Romans 8:28 at [00:01]', { detectReferences: false });
+    expect(nodes.map((node) => node.type)).toEqual(['text', 'timestamp']);
+    expect(parseNote('# Romans 8:28', { detectReferences: false })).toEqual([
+      { type: 'heading', level: 1, children: [text('Romans 8:28')] },
+    ]);
+    expect(mockedFind).not.toHaveBeenCalled();
+  });
+
   test('survives a throwing reference detector', () => {
     mockedFind.mockImplementation(() => {
       throw new Error('boom');
@@ -233,6 +242,11 @@ describe('toPlainText', () => {
 
   test('returns empty string for empty content', () => {
     expect(toPlainText('')).toBe('');
+  });
+
+  test('keeps references as text without running reference detection', () => {
+    expect(toPlainText('Read **Romans 8:28**')).toBe('Read Romans 8:28');
+    expect(mockedFind).not.toHaveBeenCalled();
   });
 });
 
