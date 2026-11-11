@@ -11,7 +11,6 @@
     "backgroundColor": "#F6F3EC",
     "ios": {
       "bundleIdentifier": "app.faithscroll.ios",
-      "buildNumber": "1",
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "icon": "./assets/expo.icon",
@@ -26,7 +25,6 @@
     },
     "android": {
       "package": "app.faithscroll.android",
-      "versionCode": 1,
       "permissions": [
         "RECORD_AUDIO"
       ],
