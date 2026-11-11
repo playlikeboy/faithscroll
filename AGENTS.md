@@ -1,4 +1,14 @@
-This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
+This is **Faithscroll**, an Expo/React Native app (iOS first, Android also built): Bible reading, sermon recording and notes, journaling and prayer in one private, connected library. Prioritize mobile-first patterns, performance, accessibility and privacy.
+
+## Faithscroll essentials
+
+- Product spec: `docs/PRD.md`. Progress: `docs/CHECKLIST.md`. Conventions, file layout and route map: `docs/AGENT_GUIDE.md`.
+- **Local-first data.** User data lives in expo-sqlite via Drizzle (`src/db/schema.ts`). Repository functions take the database as a parameter (`fn(db: AppDatabase, …)`). Every write to a syncable table calls `enqueueChange()` in the same transaction; edits use `touch()`, deletes are soft (`tombstone()`), and reads filter `deleted_at IS NULL`. Change the schema only with `npm run db:generate`.
+- **Bible text** comes from the bundled read-only `assets/bible/bible.db` (World English Bible, public domain). Verses are integer ids: `book * 1_000_000 + chapter * 1_000 + verse`.
+- **UI** uses `@/components/ui` and theme tokens from `@/theme` (no hard-coded colours). Scripture uses the Literata serif; AI-generated content always sits in `Card tone="ai"` with a visible label.
+- **Privacy.** Never log or track user content (prayers, notes, journal, transcripts, search queries). No secrets in the app; AI keys live only in Supabase Edge Function secrets. Cloud features must degrade gracefully when `getSupabase()` returns null.
+- **Tests.** Jest 30 + jest-expo. Repository tests use a real in-memory SQLite DB (`createTestDb()`); React Native Testing Library 14's `render`/`fireEvent` are async. Run `npm test` (uses `--forceExit`), `npm run typecheck`, `npm run lint` before finishing.
+- **Git.** Conventional commits (`feat:`, `fix:`, …), one commit per completed change, authored as `playlikeboy`.
 
 ## Expo has changed — do not trust your training data
 

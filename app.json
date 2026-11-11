@@ -2,6 +2,7 @@
   "expo": {
     "name": "Faithscroll",
     "slug": "faithscroll",
+    "description": "Bible, Sermons & Journal — one peaceful place for your Bible, sermons, notes and prayers.",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -18,13 +19,17 @@
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
       "package": "app.faithscroll.android",
       "versionCode": 1,
-      "permissions": ["RECORD_AUDIO"],
+      "permissions": [
+        "RECORD_AUDIO"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {

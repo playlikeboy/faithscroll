@@ -1,6 +1,27 @@
 {
   "name": "faithscroll",
   "version": "1.0.0",
+  "description": "Faithscroll — a calm, private companion for Bible reading, sermon notes and recordings, journaling and prayer.",
+  "author": "Shaswat Raj",
+  "license": "UNLICENSED",
+  "private": true,
+  "homepage": "https://github.com/playlikeboy/faithscroll#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/playlikeboy/faithscroll.git"
+  },
+  "bugs": {
+    "url": "https://github.com/playlikeboy/faithscroll/issues"
+  },
+  "keywords": [
+    "bible",
+    "sermon-notes",
+    "journal",
+    "prayer",
+    "expo",
+    "react-native",
+    "ios"
+  ],
   "main": "expo-router/entry",
   "dependencies": {
     "@expo-google-fonts/literata": "^0.4.3",
@@ -80,7 +101,6 @@
     "test:coverage": "jest --coverage --forceExit",
     "db:generate": "drizzle-kit generate"
   },
-  "private": true,
   "jest": {
     "preset": "jest-expo",
     "setupFiles": [
