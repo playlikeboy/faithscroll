@@ -44,3 +44,4 @@ example
 
 # test coverage reports
 coverage/
+supabase/.temp/
