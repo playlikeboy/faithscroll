@@ -1,8 +1,10 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { Card, FaithButton, FaithText, Icon, type IconName } from '@/components/ui';
+import { Card, FaithButton, FaithText } from '@/components/ui';
 import type { ScriptureTextStyle } from '@/features/settings/scripture-size';
-import { MIN_TOUCH_TARGET, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
+
+import { CardAction } from './card-action';
 
 export interface VerseOfTheDayCardProps {
   reference: string;
@@ -16,32 +18,6 @@ export interface VerseOfTheDayCardProps {
   onShare: () => void;
   onStudy: () => void;
   onRead: () => void;
-}
-
-interface ActionProps {
-  icon: IconName;
-  label: string;
-  accessibilityLabel: string;
-  isSelected?: boolean;
-  onPress: () => void;
-}
-
-function CardAction({ icon, label, accessibilityLabel, isSelected, onPress }: ActionProps) {
-  const { colors } = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityState={isSelected === undefined ? undefined : { selected: isSelected }}
-      onPress={onPress}
-      hitSlop={4}
-      style={({ pressed }) => [styles.action, { opacity: pressed ? 0.6 : 1 }]}>
-      <Icon name={icon} size={18} color={colors.primaryText} />
-      <FaithText variant="secondary" weight="600" color="primaryText">
-        {label}
-      </FaithText>
-    </Pressable>
-  );
 }
 
 /** Featured passage on Today: Scripture first, then quiet actions (save, share, study). */
@@ -111,11 +87,4 @@ const styles = StyleSheet.create({
   card: { gap: 14, paddingVertical: 22, paddingHorizontal: 20, overflow: 'hidden' },
   accent: { position: 'absolute', left: 0, top: 22, width: 3, height: 28, borderTopRightRadius: 2, borderBottomRightRadius: 2 },
   actions: { flexDirection: 'row', gap: 4, marginTop: 2, marginLeft: -8 },
-  action: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    minHeight: MIN_TOUCH_TARGET,
-    paddingHorizontal: 8,
-  },
 });
