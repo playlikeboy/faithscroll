@@ -46,14 +46,16 @@ export const ATTRIBUTIONS: readonly Attribution[] = [
   },
   {
     title: 'Open-source software',
-    body: 'Faithscroll is built with open-source software including React Native, Expo, Drizzle ORM, Zustand, TanStack Query, Zod, Supabase and Sentry, used under their licences (mostly MIT, Apache-2.0 and BSD).',
+    body: 'Faithscroll is built with open-source software including React Native, Expo, Drizzle ORM, Zustand, TanStack Query, Zod, Supabase, RevenueCat and Sentry, used under their own licences (mostly MIT, Apache-2.0 and BSD). Those licences cover only the open-source components, not Faithscroll itself.',
   },
 ];
+
+export const COPYRIGHT_NOTICE = '© 2026 Shaswat Raj. All rights reserved.';
 
 export const PRIVACY_POLICY_SUMMARY =
   'Faithscroll collects as little as possible. Your content stays on your device unless you sign in to sync or choose an AI feature. ' +
   'You can export everything or delete it at any time in Settings → Your data, and delete your account in Settings → Account.';
 
 export const TERMS_SUMMARY =
-  'Faithscroll is offered for personal, non-commercial use. AI study and recaps can be wrong; they are aids, not authorities — check Scripture and talk with trusted pastors about important questions. ' +
+  'Faithscroll is proprietary software by Shaswat Raj, licensed to you for personal, non-commercial use. AI study and recaps can be wrong; they are aids, not authorities — check Scripture and talk with trusted pastors about important questions. ' +
   'Only record sermons where you are allowed to. Subscriptions renew automatically until cancelled in your App Store or Google Play account.';
