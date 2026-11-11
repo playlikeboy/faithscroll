@@ -7,6 +7,9 @@ import type { DailyReminderSettings } from '@/features/reminders/use-daily-remin
 import { ActiveReminderList, describeSchedule } from '../active-reminder-list';
 import { DailyReminderSection } from '../daily-reminder-section';
 
+// Screen tests render real RN trees; the first render can be slow under coverage instrumentation.
+jest.setTimeout(30_000);
+
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 jest.mock('@react-native-community/datetimepicker', () => {
   const { View } = jest.requireActual('react-native');

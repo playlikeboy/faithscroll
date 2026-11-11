@@ -25,6 +25,9 @@ import {
 import { notifyTables } from '@/features/library/testing/live-db-mocks';
 import { listSavedVerses } from '@/features/library/annotation-lists';
 
+// Screen tests render real RN trees; the first render can be slow under coverage instrumentation.
+jest.setTimeout(30_000);
+
 jest.mock('expo-sqlite', () => jest.requireActual('@/features/library/testing/live-db-mocks').expoSqliteMock);
 jest.mock('@/db/client', () => ({ db: jest.requireActual('@/db/testing/create-test-db').createTestDb() }));
 jest.mock('expo-router', () => ({
