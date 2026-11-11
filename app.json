@@ -10,11 +10,22 @@
     "backgroundColor": "#F6F3EC",
     "ios": {
       "bundleIdentifier": "app.faithscroll.ios",
+      "buildNumber": "1",
       "supportsTablet": false,
+      "usesAppleSignIn": true,
       "icon": "./assets/expo.icon",
       "config": {
         "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"]
       }
+    },
+    "android": {
+      "package": "app.faithscroll.android",
+      "versionCode": 1,
+      "permissions": ["RECORD_AUDIO"],
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "single",
@@ -31,6 +42,43 @@
           "dark": {
             "backgroundColor": "#111914"
           }
+        }
+      ],
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": true
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Faithscroll uses the microphone only when you choose to record a sermon. Recordings stay on your device unless you choose to transcribe them.",
+          "enableBackgroundRecording": true,
+          "enableBackgroundPlayback": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#203B32"
+        }
+      ],
+      "expo-apple-authentication",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
+      "expo-sharing",
+      "expo-asset",
+      "@react-native-community/datetimepicker",
+      [
+        "@sentry/react-native",
+        {
+          "organization": "faithscroll",
+          "project": "faithscroll-ios"
         }
       ]
     ],
