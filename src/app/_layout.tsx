@@ -10,8 +10,10 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ErrorState, Screen } from '@/components/ui';
 import { db } from '@/db/client';
 import migrations from '@/db/migrations/migrations';
+import { prepareBibleDatabase } from '@/features/bible/db/connection';
 import { initNotifications } from '@/features/reminders/notifications';
 import { initSync } from '@/features/sync/init';
+import { logger } from '@/lib/logger';
 import { initMonitoring } from '@/services/monitoring/init';
 import { initPayments } from '@/services/payments/init';
 import { usePreferences, usePreferencesHydrated } from '@/stores/preferences';
@@ -21,6 +23,8 @@ import { useFaithFonts } from '@/theme/fonts';
 void SplashScreen.preventAutoHideAsync();
 initMonitoring();
 initPayments();
+// Copy the bundled Bible (~13 MB) on first launch before the reader needs it; queries retry on failure.
+prepareBibleDatabase().catch((error: unknown) => logger.error('Preparing the Bible database failed', error));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 60_000 } },

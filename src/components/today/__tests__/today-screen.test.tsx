@@ -20,6 +20,11 @@ jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
 jest.mock('react-native-safe-area-context', () => jest.requireActual('react-native-safe-area-context/jest/mock').default);
 jest.mock('@/services/monitoring/analytics', () => ({ track: jest.fn() }));
 jest.mock('@/features/bible/reference', () => ({ formatReference: () => 'Psalm 23:1' }));
+// Pin the rotation so the test does not depend on today's date.
+jest.mock('@/features/bible/curated', () => ({
+  ...jest.requireActual('@/features/bible/curated'),
+  getVerseOfTheDay: () => ({ start: { bookId: 19, chapter: 23, verse: 1 }, end: { bookId: 19, chapter: 23, verse: 1 } }),
+}));
 jest.mock('@/features/bible/repository', () => ({
   ...jest.requireActual('@/features/bible/repository'),
   getVerses: jest.fn(async () => [
