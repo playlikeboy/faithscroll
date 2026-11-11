@@ -8,6 +8,7 @@
  */
 import * as Notifications from 'expo-notifications';
 import { router, type Href } from 'expo-router';
+import { Platform } from 'react-native';
 
 import { logger } from '@/lib/logger';
 
@@ -108,7 +109,8 @@ export function initNotifications(options: InitNotificationsOptions = {}): () =>
   const subscription = Notifications.addNotificationResponseReceivedListener(handleResponse);
 
   try {
-    const initial = Notifications.getLastNotificationResponse();
+    // Browsers have no launch notification (the call is unavailable in the web preview).
+    const initial = Platform.OS === 'web' ? null : Notifications.getLastNotificationResponse();
     if (initial) {
       handleResponse(initial);
       Notifications.clearLastNotificationResponse();
