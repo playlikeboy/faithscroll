@@ -131,4 +131,18 @@ describe('groupPrayersByStatus', () => {
     ]);
     expect(sections[0]?.description).toBeTruthy();
   });
+
+  test('orders answered prayers by when they were answered, most recent first', () => {
+    const base = { content: '', category: null, reminderAt: null, reminderNotificationId: null, createdAt: '', deletedAt: null, version: 1 };
+    const older = { ...base, id: 'a', title: 'Older', status: 'answered' as const, answeredAt: '2026-01-01T00:00:00Z', updatedAt: '2026-11-01T00:00:00Z' };
+    const newer = { ...base, id: 'b', title: 'Newer', status: 'answered' as const, answeredAt: '2026-06-01T00:00:00Z', updatedAt: '2026-02-01T00:00:00Z' };
+    const archived = { ...base, id: 'c', title: 'Set aside', status: 'archived' as const, answeredAt: null, updatedAt: '2026-03-01T00:00:00Z' };
+
+    const sections = groupPrayersByStatus([older, archived, newer]);
+
+    expect(sections.map((s) => [s.status, s.data.map((p) => p.title)])).toEqual([
+      ['answered', ['Newer', 'Older']],
+      ['archived', ['Set aside']],
+    ]);
+  });
 });

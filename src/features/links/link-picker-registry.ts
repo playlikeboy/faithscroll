@@ -39,6 +39,31 @@ export function isLinkRequestPending(requestId: string): boolean {
   return pending.has(requestId);
 }
 
+const scheduledReleases = new Map<string, ReturnType<typeof setTimeout>>();
+
+/**
+ * Settle a request with null on the next tick (picker unmounted without a choice).
+ * Deferred so a StrictMode unmount/remount cycle can `retainLinkRequest` and keep it open.
+ */
+export function releaseLinkRequest(requestId: string): void {
+  if (!pending.has(requestId) || scheduledReleases.has(requestId)) return;
+  scheduledReleases.set(
+    requestId,
+    setTimeout(() => {
+      scheduledReleases.delete(requestId);
+      resolveLinkRequest(requestId, null);
+    }, 0),
+  );
+}
+
+/** Cancel a scheduled release (the picker mounted again). */
+export function retainLinkRequest(requestId: string): void {
+  const timer = scheduledReleases.get(requestId);
+  if (timer === undefined) return;
+  clearTimeout(timer);
+  scheduledReleases.delete(requestId);
+}
+
 // ---------------------------------------------------------------------------
 // Route params (strings only) ⇄ picker options
 // ---------------------------------------------------------------------------

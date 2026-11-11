@@ -3,7 +3,9 @@ import {
   isLinkRequestPending,
   openLinkRequest,
   parseLinkPickerParams,
+  releaseLinkRequest,
   resolveLinkRequest,
+  retainLinkRequest,
   toLinkPickerParams,
 } from '../link-picker-registry';
 
@@ -23,6 +25,27 @@ describe('link picker registry', () => {
     const promise = openLinkRequest('req-2');
     resolveLinkRequest('req-2', null);
     await expect(promise).resolves.toBeNull();
+  });
+
+  test('release settles with null on the next tick unless retained (StrictMode remount)', async () => {
+    jest.useFakeTimers();
+    const kept = openLinkRequest('req-keep');
+    releaseLinkRequest('req-keep');
+    retainLinkRequest('req-keep');
+    jest.runAllTimers();
+    expect(isLinkRequestPending('req-keep')).toBe(true);
+    resolveLinkRequest('req-keep', null);
+    await expect(kept).resolves.toBeNull();
+
+    const dropped = openLinkRequest('req-drop');
+    releaseLinkRequest('req-drop');
+    releaseLinkRequest('req-drop');
+    jest.runAllTimers();
+    await expect(dropped).resolves.toBeNull();
+    expect(isLinkRequestPending('req-drop')).toBe(false);
+    releaseLinkRequest('unknown');
+    retainLinkRequest('unknown');
+    jest.useRealTimers();
   });
 
   test('re-opening the same id cancels the earlier request', async () => {

@@ -9,7 +9,12 @@ import { db } from '@/db/client';
 import { useDebouncedValue } from '@/features/journal/use-debounced-value';
 import { useLiveData } from '@/features/journal/use-live-data';
 import { CONNECTION_TABLES } from '@/features/links/connections';
-import { parseLinkPickerParams, resolveLinkRequest } from '@/features/links/link-picker-registry';
+import {
+  parseLinkPickerParams,
+  releaseLinkRequest,
+  resolveLinkRequest,
+  retainLinkRequest,
+} from '@/features/links/link-picker-registry';
 import { LINK_TYPE_ICONS, type ResolvedEntity } from '@/features/links/resolve';
 import { searchLinkables, type LinkSearchSection } from '@/features/links/search';
 import { GUTTER, MIN_TOUCH_TARGET, useTheme } from '@/theme';
@@ -30,9 +35,8 @@ export function LinkPickerScreen({ params }: LinkPickerScreenProps) {
   // Dismissing the modal (swipe, Cancel, back) settles the request with null.
   useEffect(() => {
     if (!requestId) return undefined;
-    return () => {
-      resolveLinkRequest(requestId, null);
-    };
+    retainLinkRequest(requestId);
+    return () => releaseLinkRequest(requestId);
   }, [requestId]);
 
   const { data: sections, error, reload } = useLiveData<LinkSearchSection[]>(

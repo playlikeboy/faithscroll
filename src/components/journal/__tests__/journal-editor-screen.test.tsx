@@ -17,8 +17,10 @@ jest.mock('@/db/client', () => ({ db: jest.requireActual('@/db/testing/create-te
 jest.mock('react-native-safe-area-context', () => jest.requireActual('react-native-safe-area-context/jest/mock').default);
 jest.mock('@/features/bible/reference', () => ({ formatReference: jest.fn(() => '') }));
 jest.mock('@/services/monitoring/analytics', () => ({ track: jest.fn() }));
-jest.mock('@/features/bible/use-passage-picker', () => ({ usePassagePicker: () => jest.fn(async () => null) }));
-jest.mock('@/features/links/use-link-picker', () => ({ useLinkPicker: () => jest.fn(async () => null) }));
+const mockPickPassage = jest.fn();
+const mockPickLink = jest.fn();
+jest.mock('@/features/bible/use-passage-picker', () => ({ usePassagePicker: () => mockPickPassage }));
+jest.mock('@/features/links/use-link-picker', () => ({ useLinkPicker: () => mockPickLink }));
 jest.mock('@react-native-community/datetimepicker', () => {
   const { View } = jest.requireActual('react-native');
   return { __esModule: true, default: View, DateTimePickerAndroid: { open: jest.fn() } };
@@ -188,8 +190,55 @@ describe('JournalEditorScreen — existing entries', () => {
     expect(mockRouter.back).toHaveBeenCalled();
   });
 
+  test('attaches a passage and a link through the pickers, opens and unlinks them', async () => {
+    const entry = createJournalEntry(db, { title: 'Connected' });
+    mockPickPassage.mockResolvedValueOnce({ start: { bookId: 43, chapter: 3, verse: 16 }, end: { bookId: 43, chapter: 3, verse: 16 } });
+    mockPickLink.mockResolvedValueOnce({ type: 'sermon', id: 'sermon-1', title: 'The Power of Forgiveness' });
+    await render(<JournalEditorScreen entryId={entry.id} prefill={parseJournalPrefill({})} />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Add a passage' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Link a sermon, prayer or entry' }));
+    await flushChanges();
+
+    expect(mockPickLink).toHaveBeenCalledWith({ exclude: { type: 'journal_entry', id: entry.id }, title: 'Link to…' });
+    expect(listScriptureReferences(db, 'journal_entry', entry.id)).toHaveLength(1);
+    expect(listLinks(db, { type: 'journal_entry', id: entry.id })).toHaveLength(1);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'John 3:16' }));
+    expect(mockRouter.push).toHaveBeenLastCalledWith('/bible/read/43/3?verse=16');
+    await fireEvent.press(screen.getByRole('button', { name: /^The Power of Forgiveness/ }));
+    expect(mockRouter.push).toHaveBeenLastCalledWith('/sermons/sermon-1');
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Unlink The Power of Forgiveness' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Remove John 3:16' }));
+    await flushChanges();
+
+    expect(listLinks(db, { type: 'journal_entry', id: entry.id })).toEqual([]);
+    expect(listScriptureReferences(db, 'journal_entry', entry.id)).toEqual([]);
+  });
+
+  test('changes type and removes a tag', async () => {
+    const entry = createJournalEntry(db, { title: 'Typed', entryType: 'personal' });
+    await render(<JournalEditorScreen entryId={entry.id} prefill={parseJournalPrefill({})} />);
+
+    await fireEvent.changeText(screen.getByLabelText('Add a tag'), 'Hope');
+    await fireEvent(screen.getByLabelText('Add a tag'), 'submitEditing');
+    await fireEvent.press(screen.getByRole('button', { name: 'Gratitude' }));
+    await flushChanges();
+    await fireEvent.press(screen.getByRole('button', { name: '#Hope' }));
+    await flushChanges();
+
+    expect(getJournalEntry(db, entry.id)?.entryType).toBe('gratitude');
+    expect(listTagsForEntity(db, 'journal_entry', entry.id)).toEqual([]);
+  });
+
   test('shows a calm message for a missing entry', async () => {
     await render(<JournalEditorScreen entryId="missing-id" prefill={parseJournalPrefill({})} />);
+    expect(screen.getByText('Entry not found')).toBeTruthy();
+  });
+
+  test('an empty route id is treated as missing, not as a new entry', async () => {
+    await render(<JournalEditorScreen entryId="" prefill={parseJournalPrefill({})} />);
     expect(screen.getByText('Entry not found')).toBeTruthy();
   });
 });

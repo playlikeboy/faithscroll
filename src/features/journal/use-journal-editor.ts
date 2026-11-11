@@ -83,7 +83,7 @@ function loadInitial(entryId: string | undefined, prefill: JournalPrefill): Init
     prompt: prefill.prompt,
   };
   try {
-    if (!entryId) {
+    if (entryId === undefined) {
       const pending = { passages: prefill.passage ? [prefill.passage] : [], links: existingLinks(db, prefill.links) };
       return { status: 'ready', entryId: null, draft: blank, pending };
     }

@@ -68,7 +68,7 @@ const EMPTY_DRAFT: PrayerDraft = { title: '', content: '', category: null };
 const DETAIL_TABLES = ['prayer_entries', 'prayer_updates'] as const;
 
 function loadInitial(prayerId: string | undefined, prefill: PrayerPrefill) {
-  if (!prayerId) {
+  if (prayerId === undefined) {
     const pending: PendingConnections = { passages: prefill.passage ? [prefill.passage] : [], links: [] };
     return { status: 'ready' as EditorLoadStatus, prayerId: null, draft: EMPTY_DRAFT, pending };
   }
