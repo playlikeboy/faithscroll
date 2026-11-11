@@ -25,6 +25,23 @@ function fallbackReference({ start, end }: VerseRange): string {
   return `${head}–${chapterBookName(end.bookId)} ${end.chapter}:${end.verse}`;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function startOfLocalDay(date: Date): number {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
+/** "Today", "Yesterday" or a short date ("9 Nov") for when a chapter was last read. */
+export function formatReadAt(iso: string | null, now: Date = new Date()): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const days = Math.round((startOfLocalDay(now) - startOfLocalDay(date)) / DAY_MS);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
 /**
  * Human reference for a range ("Romans 8:28–30"). Uses the shared `formatReference`
  * and falls back to a local format if it yields nothing.
