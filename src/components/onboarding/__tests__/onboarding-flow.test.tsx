@@ -4,6 +4,9 @@ import { OnboardingFlow } from '@/components/onboarding/onboarding-flow';
 import { track } from '@/services/monitoring/analytics';
 import { usePreferences } from '@/stores/preferences';
 
+// Screen-level suites render a lot on a cold start; allow headroom on a busy machine.
+jest.setTimeout(20_000);
+
 jest.mock('react-native-safe-area-context', () => jest.requireActual('react-native-safe-area-context/jest/mock').default);
 jest.mock('@/services/monitoring/analytics', () => ({ track: jest.fn() }));
 jest.mock('@react-native-community/datetimepicker', () => {

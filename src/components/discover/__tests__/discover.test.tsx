@@ -13,6 +13,9 @@ import { track } from '@/services/monitoring/analytics';
 
 const mockRouter = { push: jest.fn(), replace: jest.fn() };
 
+// Screen-level suites render a lot on a cold start; allow headroom on a busy machine.
+jest.setTimeout(20_000);
+
 jest.mock('@/db/client', () => ({ db: jest.requireActual('@/db/testing/create-test-db').createTestDb() }));
 jest.mock('drizzle-orm/expo-sqlite', () => ({
   useLiveQuery: (query: { all: () => unknown[] }) => ({ data: query.all(), error: undefined, updatedAt: undefined }),

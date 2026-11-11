@@ -58,7 +58,8 @@ export function useDailyReflection(now: Date): DailyReflection {
 
   const save = () => {
     try {
-      const id = saveReflection(db, { prompt, content: text, passage, date: now });
+      // entryDate comes from the moment of saving, not the (possibly stale) screen time.
+      const id = saveReflection(db, { prompt, content: text, passage });
       track({ name: 'journal_entry_created', entryType: 'reflection' });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       AccessibilityInfo.announceForAccessibility('Reflection saved to your journal');

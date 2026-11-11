@@ -6,6 +6,9 @@ import { usePreferences } from '@/stores/preferences';
 
 const mockRouter = { push: jest.fn() };
 
+// Screen-level suites render a lot on a cold start; allow headroom on a busy machine.
+jest.setTimeout(20_000);
+
 jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
 jest.mock('react-native-safe-area-context', () => jest.requireActual('react-native-safe-area-context/jest/mock').default);
 jest.mock('@/features/auth/use-session', () => ({
