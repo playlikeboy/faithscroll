@@ -1,4 +1,4 @@
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 
@@ -7,6 +7,7 @@ import { db } from '@/db/client';
 import { useSeriesList } from '@/features/sermons/hooks';
 import { createSermonFromForm } from '@/features/sermons/save-sermon-form';
 import { emptySermonForm, type SermonFormOutput } from '@/features/sermons/sermon-form-schema';
+import { parseIdParam } from '@/features/sermons/route-params';
 import { sermonHref } from '@/features/sermons/routes';
 import { usePickPassage } from '@/features/sermons/use-pick-passage';
 import { logger } from '@/lib/logger';
@@ -20,7 +21,13 @@ export default function NewSermonScreen() {
   const { colors } = useTheme();
   const series = useSeriesList();
   const pickPassage = usePickPassage('Main passage');
-  const [defaultValues] = useState(emptySermonForm);
+  const params = useLocalSearchParams<{ seriesId?: string }>();
+  // `?seriesId=` (from a series page) pre-selects that series.
+  const [defaultValues] = useState(() => {
+    const seriesId = parseIdParam(params.seriesId);
+    const empty = emptySermonForm();
+    return seriesId ? { ...empty, series: { kind: 'existing' as const, id: seriesId } } : empty;
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 

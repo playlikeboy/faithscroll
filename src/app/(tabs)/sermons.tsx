@@ -3,14 +3,14 @@ import { useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { EmptyState, ErrorState } from '@/components/ui';
+import { EmptyState, ErrorState, FaithButton } from '@/components/ui';
 import { LibraryHeader, type LibraryMode } from '@/components/sermons/library-header';
 import { RecoveryNotice } from '@/components/sermons/recovery-notice';
 import { SeriesCard } from '@/components/sermons/series-card';
 import { SermonCard } from '@/components/sermons/sermon-card';
 import { useRecordingRecovery } from '@/features/recording/use-recording-recovery';
 import { useSeriesList, useSermonList } from '@/features/sermons/hooks';
-import { seriesHref, sermonHref } from '@/features/sermons/routes';
+import { SERIES_INDEX_HREF, seriesHref, sermonHref } from '@/features/sermons/routes';
 import { useDebouncedValue } from '@/features/sermons/use-debounced-value';
 import { GUTTER, useTheme } from '@/theme';
 
@@ -67,6 +67,9 @@ export default function SermonsScreen() {
               <EmptyState icon="list" title="No series yet" message="Group sermons into a series when you add or edit a sermon." />
             )
           }
+          ListFooterComponent={
+            <FaithButton label="Manage series" icon="list" variant="ghost" onPress={() => router.push(SERIES_INDEX_HREF)} style={styles.footer} />
+          }
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
@@ -114,4 +117,5 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   content: { paddingHorizontal: GUTTER, paddingBottom: 48 },
   separator: { height: 12 },
+  footer: { marginTop: 16, alignSelf: 'center' },
 });
