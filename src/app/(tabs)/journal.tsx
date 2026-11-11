@@ -1,10 +1,5 @@
-// PLACEHOLDER — owned by the journal agent; replace this screen entirely.
-import { EmptyState, Screen } from '@/components/ui';
+import { JournalHomeScreen } from '@/components/journal/journal-home-screen';
 
-export default function JournalScreen() {
-  return (
-    <Screen title="Journal">
-      <EmptyState icon="journal" title="Journal" message="Coming soon." />
-    </Screen>
-  );
+export default function JournalTab() {
+  return <JournalHomeScreen />;
 }

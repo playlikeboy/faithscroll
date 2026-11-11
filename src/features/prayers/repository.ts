@@ -2,7 +2,7 @@
  * Prayer journal (PRD §6.5). Status changes are recorded as `prayer_updates` so the
  * story of a prayer is kept; nothing is ever framed as failure.
  */
-import { and, desc, eq, isNull, or } from 'drizzle-orm';
+import { and, count, desc, eq, isNull, or } from 'drizzle-orm';
 
 import { enqueueChange, tombstone, touch } from '@/db/mutations';
 import { prayerEntries, prayerUpdates } from '@/db/schema';
@@ -150,6 +150,18 @@ export function listPrayers(db: AppDatabase, options: PrayerListOptions = {}): P
     )
     .orderBy(desc(prayerEntries.updatedAt))
     .all();
+}
+
+/** Number of live prayers in each status (for gentle summaries — never a score). */
+export function countPrayersByStatus(db: AppDatabase): Record<PrayerStatus, number> {
+  const rows = db
+    .select({ status: prayerEntries.status, total: count() })
+    .from(prayerEntries)
+    .where(isNull(prayerEntries.deletedAt))
+    .groupBy(prayerEntries.status)
+    .all();
+  const empty: Record<PrayerStatus, number> = { praying: 0, ongoing: 0, answered: 0, archived: 0 };
+  return rows.reduce((totals, row) => ({ ...totals, [row.status]: row.total }), empty);
 }
 
 /** Store (or clear with null) the reminder time and its scheduled notification id. */

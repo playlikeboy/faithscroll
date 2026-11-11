@@ -8,6 +8,7 @@ import { listScriptureReferences } from '@/features/links/scripture-references';
 import {
   addPrayerUpdate,
   changePrayerStatus,
+  countPrayersByStatus,
   createPrayer,
   deletePrayer,
   getPrayer,
@@ -127,6 +128,20 @@ describe('listPrayers', () => {
     expect(listPrayers(db).map((p) => p.title).sort()).toEqual(['Healing for Mum', 'New job']);
     expect(listPrayers(db, { status: 'answered' }).map((p) => p.title)).toEqual(['New job']);
     expect(listPrayers(db, { search: 'interview' }).map((p) => p.title)).toEqual(['New job']);
+  });
+});
+
+describe('countPrayersByStatus', () => {
+  test('counts live prayers per status with zeros for empty statuses', () => {
+    const db = createTestDb();
+    createPrayer(db, { title: 'A' });
+    createPrayer(db, { title: 'B' });
+    const answered = createPrayer(db, { title: 'C' });
+    changePrayerStatus(db, answered.id, 'answered');
+    const gone = createPrayer(db, { title: 'D' });
+    deletePrayer(db, gone.id);
+
+    expect(countPrayersByStatus(db)).toEqual({ praying: 2, ongoing: 0, answered: 1, archived: 0 });
   });
 });
 
