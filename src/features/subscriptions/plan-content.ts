@@ -1,7 +1,8 @@
 /**
  * What stays free, what Plus adds, and the AI/storage limits — shown BEFORE purchase (PRD §14).
- * Keep the numbers in sync with the server quotas (supabase/functions/_shared/quota.ts) and
- * the cloud audio retention (`ai_expired_audio`, 30 days).
+ * Keep the numbers in sync with the server quotas (`DEFAULT_LIMITS` in
+ * supabase/functions/_shared/quota.ts; overridable with the AI_LIMITS_JSON secret) and the cloud
+ * audio retention (`ai_expired_audio`, 30 days).
  */
 import type { SubscriptionSnapshot } from '@/services/payments/entitlement';
 import type { PlanOption } from '@/services/payments/offerings';
@@ -32,16 +33,17 @@ export interface LimitRow {
   plus: string;
 }
 
-/** Monthly allowances. Must match the server quota table. */
+/** Monthly allowances. Must match `DEFAULT_LIMITS` in supabase/functions/_shared/quota.ts. */
 export const MONTHLY_LIMITS: readonly LimitRow[] = [
-  { feature: 'Sermon transcription', free: '60 minutes', plus: '6 hours' },
-  { feature: 'Sermon recaps', free: '1', plus: '20' },
-  { feature: 'Deep Study', free: '5', plus: '100' },
-  { feature: 'Questions to the study assistant', free: '10', plus: '300' },
+  { feature: 'Sermon transcription', free: '60 minutes', plus: '20 hours' },
+  { feature: 'Sermon recaps', free: '2', plus: '40' },
+  { feature: 'Deep Study', free: '10', plus: '300' },
+  { feature: 'Questions to the study assistant', free: '30', plus: '600' },
 ];
 
 export const LIMIT_NOTES: readonly string[] = [
-  'Allowances reset on the first day of each month. Unused allowance doesn’t roll over.',
+  'Advanced Deep Study is included with Plus. Basic Deep Study is available to everyone.',
+  'Allowances reset on the first day of each month (UTC). Unused allowance doesn’t roll over.',
   'Audio you choose to transcribe is uploaded privately and deleted from our servers after 30 days. Your recording stays on your device.',
   'AI features need an internet connection and an account. Nothing is sent to AI unless you ask.',
 ];

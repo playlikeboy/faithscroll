@@ -12,7 +12,7 @@ import { openManageSubscriptions, refreshCustomerInfo } from '@/services/payment
 
 export default function SubscriptionSettingsScreen() {
   const router = useRouter();
-  usePaymentsIdentitySync();
+  const { requiresSignIn } = usePaymentsIdentitySync();
   const { isAvailable, status, snapshot } = useSubscriptionStatus();
   const flow = usePurchaseFlow();
   const [manageError, setManageError] = useState<string | null>(null);
@@ -68,9 +68,9 @@ export default function SubscriptionSettingsScreen() {
         ) : null}
         {isAvailable ? (
           <FaithButton
-            label="Restore purchases"
+            label={requiresSignIn ? 'Sign in to restore purchases' : 'Restore purchases'}
             variant="secondary"
-            onPress={() => void flow.restore()}
+            onPress={() => (requiresSignIn ? router.push('/auth/sign-in') : void flow.restore())}
             isLoading={flow.busy === 'restore'}
             accessibilityHint="Unlocks Plus if you subscribed before with this store account"
           />

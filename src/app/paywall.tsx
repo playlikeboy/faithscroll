@@ -41,6 +41,13 @@ export default function PaywallScreen() {
     }
     await model.buySelected();
   };
+  const restore = async () => {
+    if (model.requiresSignIn) {
+      router.push('/auth/sign-in');
+      return;
+    }
+    await flow.restore();
+  };
 
   return (
     <Screen
@@ -104,9 +111,9 @@ export default function PaywallScreen() {
       <View style={styles.footer}>
         {subscription.isAvailable ? (
           <FaithButton
-            label="Restore purchases"
+            label={model.requiresSignIn ? 'Sign in to restore purchases' : 'Restore purchases'}
             variant="ghost"
-            onPress={() => void flow.restore()}
+            onPress={() => void restore()}
             isLoading={flow.busy === 'restore'}
             isDisabled={flow.busy !== null}
             accessibilityHint="Unlocks Plus if you subscribed before with this store account"

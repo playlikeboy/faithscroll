@@ -3,7 +3,6 @@ import { Platform } from 'react-native';
 
 import { track } from '@/services/monitoring/analytics';
 import type { PlanOption } from '@/services/payments/offerings';
-import { isSupabaseConfigured } from '@/services/supabase/client';
 
 import { billingDisclosure, ctaLabel, normalizePaywallSource } from './plan-content';
 import { useSubscriptionStatus, type SubscriptionStatus } from './use-entitlements';
@@ -34,7 +33,7 @@ export interface PaywallModel {
 /** All paywall logic; the route only renders. */
 export function usePaywall(rawSource: unknown): PaywallModel {
   const source = normalizePaywallSource(rawSource);
-  const { userId, isSessionLoading } = usePaymentsIdentitySync();
+  const { requiresSignIn } = usePaymentsIdentitySync();
   const subscription = useSubscriptionStatus();
   const query = usePlanOptions(subscription.isAvailable);
   const flow = usePurchaseFlow();
@@ -65,7 +64,7 @@ export function usePaywall(rawSource: unknown): PaywallModel {
     plans,
     selected,
     select: setSelectedId,
-    requiresSignIn: isSupabaseConfigured() && !isSessionLoading && userId === null,
+    requiresSignIn,
     cta: selected ? ctaLabel(selected) : null,
     disclosure: selected ? billingDisclosure(selected, platformStore) : null,
     flow,
