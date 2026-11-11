@@ -83,6 +83,9 @@
   "private": true,
   "jest": {
     "preset": "jest-expo",
+    "setupFiles": [
+      "<rootDir>/jest.setup.ts"
+    ],
     "testPathIgnorePatterns": [
       "/node_modules/",
       "/supabase/"
@@ -90,7 +93,8 @@
     "collectCoverageFrom": [
       "src/**/*.{ts,tsx}",
       "!src/app/**",
-      "!**/*.d.ts"
+      "!**/*.d.ts",
+      "!src/db/migrations/**"
     ]
   },
   "allowScripts": {

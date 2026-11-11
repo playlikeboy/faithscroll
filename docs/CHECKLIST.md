@@ -7,11 +7,11 @@ Tracks the PRD (v1.0, 10 Nov 2026) phase by phase. Each item is one commit.
 
 - [x] 0.1 Scaffold Expo SDK 58 app (Expo Router, TypeScript, React 19.3, RN 0.88)
 - [x] 0.2 Project config: app identity, bundle id, line endings, test runner
-- [ ] 0.3 Design tokens (Paper/Forest/Sage/Sand/Gold, dark mode) + Literata font
-- [ ] 0.4 Base UI components (FaithText, FaithButton, IconButton, Card, EmptyState, Screen)
-- [ ] 0.5 Navigation shell: Today / Bible / Sermons / Journal / Library tabs + Settings
+- [x] 0.3 Design tokens (Paper/Forest/Sage/Sand/Gold, dark mode) + Literata font
+- [x] 0.4 Base UI components (FaithText, FaithButton, IconButton, Card, EmptyState, Screen)
+- [x] 0.5 Navigation shell: Today / Bible / Sermons / Journal / Library tabs + Settings
 - [ ] 0.6 Bible data pipeline: World English Bible (public domain) → bundled `bible.db` with FTS5
-- [ ] 0.7 Local user database: Drizzle schema + migrations (expo-sqlite)
+- [x] 0.7 Local user database: Drizzle schema + migrations (expo-sqlite)
 - [ ] 0.8 Supabase: Postgres schema, RLS policies, storage bucket, typed client
 - [ ] 0.9 Auth: Sign in with Apple + email (optional; app works signed-out)
 - [ ] 0.10 Privacy policy + terms drafts
@@ -70,9 +70,17 @@ Tracks the PRD (v1.0, 10 Nov 2026) phase by phase. Each item is one commit.
 - [ ] 5.7 Privacy-safe analytics event schema
 - [ ] 5.8 EAS build profiles + App Store checklist
 
+## Phase 6 — Widgets, publish, builds (added 11 Nov 2026)
+
+- [ ] 6.1 Home-screen widgets: Verse of the Day + continue reading (iOS, Android)
+- [ ] 6.2 Push repository to a git remote
+- [ ] 6.3 EAS Build: Android APK (preview profile) for sharing
+- [ ] 6.4 EAS Build: iOS production build + EAS Submit to App Store Connect / TestFlight
+
 ## Release gates that need you (not code)
 
 - Bible translation licences beyond WEB
 - Supabase project URL / anon key, OpenAI key (server secret), RevenueCat keys, Sentry DSN
 - Apple Developer account, bundle id, Sign in with Apple capability
 - Real-iPhone testing of background recording and interruptions
+- Expo account (`eas login`) for EAS builds; GitHub (or other) remote for `git push`
