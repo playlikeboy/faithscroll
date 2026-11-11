@@ -45,3 +45,6 @@ example
 # test coverage reports
 coverage/
 supabase/.temp/
+
+# store credentials (e.g. Play service-account JSON)
+secrets/
