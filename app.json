@@ -90,6 +90,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "7ffc9b40-02b0-491f-ae8a-84243c865fec"
+      }
+    },
+    "owner": "playlikeboy"
   }
 }
