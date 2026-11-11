@@ -59,6 +59,7 @@
     "expo-system-ui": "~58.0.7",
     "expo-updates": "~58.0.21",
     "expo-web-browser": "~58.0.7",
+    "expo-widgets": "~58.0.27",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-hook-form": "^7.91.0",
@@ -108,7 +109,7 @@
     ],
     "testPathIgnorePatterns": [
       "/node_modules/",
-      "/supabase/"
+      "<rootDir>/supabase/"
     ],
     "collectCoverageFrom": [
       "src/**/*.{ts,tsx}",

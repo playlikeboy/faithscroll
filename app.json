@@ -90,6 +90,27 @@
           "organization": "faithscroll",
           "project": "faithscroll-ios"
         }
+      ],
+      [
+        "expo-widgets",
+        {
+          "widgets": [
+            {
+              "name": "VerseOfTheDay",
+              "displayName": "Verse of the Day",
+              "description": "A verse from Scripture each day, from the World English Bible.",
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "accessoryRectangular"
+                ],
+                "initialLayout": "src/widgets/verse-of-the-day.tsx"
+              },
+              "android": null
+            }
+          ]
+        }
       ]
     ],
     "experiments": {

@@ -13,6 +13,7 @@ import migrations from '@/db/migrations/migrations';
 import { prepareBibleDatabase } from '@/features/bible/db/connection';
 import { initNotifications } from '@/features/reminders/notifications';
 import { initSync } from '@/features/sync/init';
+import { syncVerseWidget } from '@/features/widgets/sync-verse-widget';
 import { logger } from '@/lib/logger';
 import { initMonitoring } from '@/services/monitoring/init';
 import { initPayments } from '@/services/payments/init';
@@ -127,6 +128,7 @@ export default function RootLayout() {
     if (!migrated) return undefined;
     const stopNotifications = initNotifications();
     const stopSync = initSync();
+    void syncVerseWidget();
     return () => {
       stopNotifications();
       stopSync();
