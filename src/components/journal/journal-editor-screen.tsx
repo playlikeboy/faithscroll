@@ -1,5 +1,5 @@
 import { Stack, useRouter } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { NoteEditor } from '@/components/editor/note-editor';
@@ -15,10 +15,10 @@ import { useJournalEditor } from '@/features/journal/use-journal-editor';
 import { describeVerseRange } from '@/features/links/reference-text';
 import { linkedItemHref, passageHref } from '@/features/links/routes';
 import { useLinkPicker } from '@/features/links/use-link-picker';
-import { GUTTER, MIN_TOUCH_TARGET, useTheme, useThemedStyles, type Theme } from '@/theme';
+import { GUTTER, useTheme, useThemedStyles, type Theme } from '@/theme';
 
-import { AutosaveIndicator } from './autosave-indicator';
 import { DateTimeField } from './date-time-field';
+import { EditorHeaderActions } from './editor-header-actions';
 import { EntryTypeFilter } from './entry-type-filter';
 import { PromptChips } from './prompt-chips';
 
@@ -94,16 +94,7 @@ export function JournalEditorScreen({ entryId: entryIdParam, prefill }: JournalE
       <Stack.Screen
         options={{
           title: entryIdParam ? 'Journal entry' : 'New entry',
-          headerRight: () => (
-            <View style={styles.headerRight}>
-              <AutosaveIndicator status={autosave.status} hasSaved={entryId !== null} />
-              <Pressable accessibilityRole="button" accessibilityLabel="Done" onPress={done} hitSlop={8} style={styles.doneButton}>
-                <FaithText variant="heading" style={{ color: colors.primaryText }}>
-                  Done
-                </FaithText>
-              </Pressable>
-            </View>
-          ),
+          headerRight: () => <EditorHeaderActions status={autosave.status} hasSaved={entryId !== null} onDone={done} />,
         }}
       />
       <ScrollView
@@ -187,8 +178,6 @@ const createStyles = ({ colors, fonts, fontSizes }: Theme) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: colors.background },
     content: { paddingHorizontal: GUTTER, paddingTop: 8, paddingBottom: 48, gap: 18 },
-    headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    doneButton: { minHeight: MIN_TOUCH_TARGET, justifyContent: 'center' },
     title: {
       fontFamily: fonts.serifMedium,
       fontSize: fontSizes.sectionHeading,

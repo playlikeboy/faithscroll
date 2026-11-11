@@ -7,10 +7,10 @@
  *   transaction as the insert.
  * - Text autosaves (debounced) and flushes on blur/background/unmount via `useAutosave`.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { db } from '@/db/client';
-import { useAutosave, type AutosaveResult } from '@/features/editor/use-autosave';
+import type { AutosaveResult } from '@/features/editor/use-autosave';
 import {
   CONNECTION_TABLES,
   EMPTY_PENDING,
@@ -34,12 +34,13 @@ import { track } from '@/services/monitoring/analytics';
 import { appendPrompt, hasMeaningfulContent, toDraftChanges, type JournalDraft, type JournalPrefill } from './prefill';
 import { createJournalEntry, deleteJournalEntry, getJournalEntry, updateJournalEntry, type PassageIds } from './repository';
 import { DEFAULT_JOURNAL_TYPE, type JournalEntry, type JournalEntryType } from './types';
+import { useDeferredRecord } from './use-deferred-record';
 import { useLiveData } from './use-live-data';
 
-export type JournalEditorStatus = 'ready' | 'not_found' | 'error';
+export type EditorLoadStatus = 'ready' | 'not_found' | 'error';
 
 export interface JournalEditor {
-  status: JournalEditorStatus;
+  status: EditorLoadStatus;
   entryId: string | null;
   draft: JournalDraft;
   connections: Connections | undefined;
@@ -63,7 +64,7 @@ export interface JournalEditor {
 }
 
 interface InitialState {
-  status: JournalEditorStatus;
+  status: EditorLoadStatus;
   entryId: string | null;
   draft: JournalDraft;
   pending: PendingConnections;
@@ -97,41 +98,27 @@ function loadInitial(entryId: string | undefined, prefill: JournalPrefill): Init
 
 export function useJournalEditor(entryIdParam: string | undefined, prefill: JournalPrefill): JournalEditor {
   const [initial] = useState(() => loadInitial(entryIdParam, prefill));
-  const [draft, setDraft] = useState(initial.draft);
-  const [entryId, setEntryId] = useState(initial.entryId);
   const [pending, setPending] = useState(initial.pending);
-  const [actionError, setActionError] = useState<string | null>(null);
-
-  const idRef = useRef(initial.entryId);
-  const draftRef = useRef(initial.draft);
   const pendingRef = useRef(initial.pending);
-  const deletedRef = useRef(false);
-
   useEffect(() => {
-    draftRef.current = draft;
     pendingRef.current = pending;
   });
 
-  const createEntry = useCallback((value: JournalDraft): string => {
-    const created = createJournalEntry(db, toDraftChanges(value), pendingRef.current);
-    idRef.current = created.id;
-    pendingRef.current = EMPTY_PENDING;
-    setEntryId(created.id);
-    setPending(EMPTY_PENDING);
-    track({ name: 'journal_entry_created', entryType: created.entryType });
-    return created.id;
-  }, []);
-
-  const save = useCallback(
-    (value: JournalDraft) => {
-      if (deletedRef.current) return;
-      if (idRef.current) updateJournalEntry(db, idRef.current, toDraftChanges(value));
-      else if (hasMeaningfulContent(value)) createEntry(value);
+  const record = useDeferredRecord<JournalDraft>({
+    initialId: initial.entryId,
+    initialDraft: initial.draft,
+    enabled: initial.status === 'ready',
+    isMeaningful: hasMeaningfulContent,
+    create: (value) => {
+      const created = createJournalEntry(db, toDraftChanges(value), pendingRef.current);
+      pendingRef.current = EMPTY_PENDING;
+      setPending(EMPTY_PENDING);
+      track({ name: 'journal_entry_created', entryType: created.entryType });
+      return created.id;
     },
-    [createEntry],
-  );
-
-  const autosave = useAutosave(draft, save, { enabled: initial.status === 'ready' });
+    update: (id, value) => updateJournalEntry(db, id, toDraftChanges(value)),
+  });
+  const { id: entryId, setDraft, withRecord, run } = record;
 
   const { data: connections } = useLiveData(
     () => (entryId ? loadConnections(db, { type: 'journal_entry', id: entryId }) : loadPendingConnections(db, pending)),
@@ -139,39 +126,15 @@ export function useJournalEditor(entryIdParam: string | undefined, prefill: Jour
     entryId ?? `pending:${pendingConnectionsKey(pending)}`,
   );
 
-  /** Run a write that needs a saved entry, creating it first if necessary. */
-  const withEntry = useCallback(
-    (action: (id: string) => void, failure: string) => {
-      try {
-        action(idRef.current ?? createEntry(draftRef.current));
-        setActionError(null);
-      } catch (error) {
-        logger.error('Journal editor action failed', error);
-        setActionError(failure);
-      }
-    },
-    [createEntry],
-  );
-
-  const run = useCallback((action: () => void, failure: string) => {
-    try {
-      action();
-      setActionError(null);
-    } catch (error) {
-      logger.error('Journal editor action failed', error);
-      setActionError(failure);
-    }
-  }, []);
-
   const update = (changes: Partial<JournalDraft>) => setDraft((current) => ({ ...current, ...changes }));
 
   return {
     status: initial.status,
     entryId,
-    draft,
+    draft: record.draft,
     connections,
-    autosave,
-    actionError,
+    autosave: record.autosave,
+    actionError: record.actionError,
     setTitle: (title) => update({ title }),
     setContent: (content) => update({ content }),
     setEntryType: (entryType) => update({ entryType }),
@@ -180,7 +143,7 @@ export function useJournalEditor(entryIdParam: string | undefined, prefill: Jour
       setDraft((current) => ({ ...current, content: appendPrompt(current.content, prompt), prompt: current.prompt ?? prompt })),
     clearPrompt: () => update({ prompt: null }),
     attachPassage: (passage) =>
-      withEntry((id) => attachScriptureReference(db, { sourceType: 'journal_entry', sourceId: id, ...passage }), "We couldn't attach that passage."),
+      withRecord((id) => attachScriptureReference(db, { sourceType: 'journal_entry', sourceId: id, ...passage }), "We couldn't attach that passage."),
     removePassage: (item) =>
       item.isPending
         ? setPending((current) => ({
@@ -188,23 +151,27 @@ export function useJournalEditor(entryIdParam: string | undefined, prefill: Jour
             passages: current.passages.filter((p) => p.startVerseId !== item.startVerseId || p.endVerseId !== item.endVerseId),
           }))
         : run(() => detachScriptureReference(db, item.key), "We couldn't remove that passage."),
-    attachLink: (target) =>
-      withEntry((id) => createLink(db, { type: 'journal_entry', id }, target), "We couldn't link that item."),
+    attachLink: (target) => withRecord((id) => createLink(db, { type: 'journal_entry', id }, target), "We couldn't link that item."),
     removeConnection: (item) =>
       item.isPending
         ? setPending((current) => ({ ...current, links: current.links.filter((l) => l.type !== item.type || l.id !== item.id) }))
         : run(() => removeLink(db, item.key), "We couldn't remove that link."),
-    addTag: (name) => withEntry((id) => assignTag(db, 'journal_entry', id, name), "We couldn't add that tag."),
-    removeTag: (tagId) => run(() => idRef.current && unassignTag(db, 'journal_entry', idRef.current, tagId), "We couldn't remove that tag."),
+    addTag: (name) => withRecord((id) => assignTag(db, 'journal_entry', id, name), "We couldn't add that tag."),
+    removeTag: (tagId) =>
+      run(() => {
+        const id = record.currentId();
+        if (id) unassignTag(db, 'journal_entry', id, tagId);
+      }, "We couldn't remove that tag."),
     deleteEntry: () => {
-      deletedRef.current = true;
+      record.setDeleted(true);
       try {
-        if (idRef.current) deleteJournalEntry(db, idRef.current);
+        const id = record.currentId();
+        if (id) deleteJournalEntry(db, id);
         return true;
       } catch (error) {
-        deletedRef.current = false;
+        record.setDeleted(false);
         logger.error('Deleting journal entry failed', error);
-        setActionError("We couldn't delete this entry. Please try again.");
+        record.setActionError("We couldn't delete this entry. Please try again.");
         return false;
       }
     },
