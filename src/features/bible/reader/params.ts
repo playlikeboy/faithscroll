@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { LINKABLE_TYPES, type LinkableType } from '@/db/schema';
+
 import { getBook } from '../books';
 import type { VerseRange } from '../types';
 import { fromVerseId, idsToRange } from '../verse-id';
@@ -56,6 +58,25 @@ export interface VerseRangeParams {
   startVerseId: number;
   endVerseId: number;
   range: VerseRange;
+}
+
+export type CollectionTarget =
+  | ({ kind: 'range' } & VerseRangeParams)
+  | { kind: 'entity'; entityType: LinkableType; entityId: string };
+
+const entityTargetSchema = z.object({
+  entityType: z.preprocess(single, z.enum(LINKABLE_TYPES)),
+  entityId: z.preprocess(single, z.string().trim().min(1).max(64)),
+});
+
+/** Collections picker target: a verse range (`?start=&end=`) or any linkable item (`?entityType=&entityId=`). */
+export function parseCollectionTarget(params: RawParams): CollectionTarget | null {
+  if (params.start !== undefined) {
+    const range = parseVerseRangeParams(params);
+    return range ? { kind: 'range', ...range } : null;
+  }
+  const entity = entityTargetSchema.safeParse(params);
+  return entity.success ? { kind: 'entity', ...entity.data } : null;
 }
 
 /** Parse `?start=&end=` verse-id params (end defaults to start; reversed ranges are normalised). */
