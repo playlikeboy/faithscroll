@@ -130,11 +130,11 @@ export function BibleSearch() {
             ) : null}
           </View>
         }
-        ListEmptyComponent={listEmpty}
+        ListEmptyComponent={listEmpty ?? undefined}
         ListFooterComponent={
           search.isFetchingNextPage ? (
             <ActivityIndicator style={styles.spinner} color={colors.primaryText} accessibilityLabel="Loading more results" />
-          ) : null
+          ) : undefined
         }
       />
     </View>
