@@ -27,7 +27,13 @@ import { attachScriptureReference, detachScriptureReference } from '@/features/l
 import { logger } from '@/lib/logger';
 import { track } from '@/services/monitoring/analytics';
 
-import { deletePrayerWithReminder, REMINDER_OUTCOME_MESSAGES, setPrayerReminder, type ReminderOutcome } from './reminders';
+import {
+  clearReminderWhenClosed,
+  deletePrayerWithReminder,
+  REMINDER_OUTCOME_MESSAGES,
+  setPrayerReminder,
+  type ReminderOutcome,
+} from './reminders';
 import { addPrayerUpdate, changePrayerStatus, createPrayer, getPrayer, listPrayerUpdates, updatePrayer } from './repository';
 import type { Prayer, PrayerStatus, PrayerUpdate } from './types';
 
@@ -138,6 +144,7 @@ export function usePrayerEditor(prayerIdParam: string | undefined, prefill: Pray
       withRecord((id) => {
         const change = changePrayerStatus(db, id, status, note);
         if (change?.statusChange) track({ name: 'prayer_status_changed', status });
+        void clearReminderWhenClosed(db, id, status);
       }, "We couldn't update this prayer."),
     addNote: (note) => withRecord((id) => addPrayerUpdate(db, id, note), "We couldn't save that note."),
     setReminder: async (date) => {

@@ -7,7 +7,7 @@ import { cancelReminder, scheduleOneTimeReminderWithResult } from '@/features/re
 import { logger } from '@/lib/logger';
 
 import { deletePrayer, getPrayer, setPrayerReminderFields } from './repository';
-import { PRAYER_REMINDER_BODY, PRAYER_REMINDER_TITLE } from './types';
+import { PRAYER_REMINDER_BODY, PRAYER_REMINDER_TITLE, type PrayerStatus } from './types';
 
 export type ReminderOutcome = 'scheduled' | 'cleared' | 'denied' | 'invalid' | 'failed';
 
@@ -63,6 +63,16 @@ export async function setPrayerReminder(db: AppDatabase, prayerId: string, date:
     logger.error('Setting a prayer reminder failed', error);
     return 'failed';
   }
+}
+
+const CLOSED_STATUSES: ReadonlySet<PrayerStatus> = new Set(['answered', 'archived']);
+
+/** Once a prayer is answered or archived, its pending reminder no longer makes sense — clear it. */
+export async function clearReminderWhenClosed(db: AppDatabase, prayerId: string, status: PrayerStatus): Promise<void> {
+  if (!CLOSED_STATUSES.has(status)) return;
+  const prayer = getPrayer(db, prayerId);
+  if (!prayer?.reminderAt && !prayer?.reminderNotificationId) return;
+  await setPrayerReminder(db, prayerId, null);
 }
 
 /** Delete a prayer and cancel its scheduled reminder, if any. */

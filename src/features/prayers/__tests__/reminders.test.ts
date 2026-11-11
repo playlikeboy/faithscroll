@@ -2,7 +2,7 @@ import { createTestDb } from '@/db/testing/create-test-db';
 import { cancelReminder, scheduleOneTimeReminderWithResult } from '@/features/reminders/notifications';
 
 import { groupPrayersByStatus } from '../grouping';
-import { deletePrayerWithReminder, isReminderUpcoming, setPrayerReminder } from '../reminders';
+import { clearReminderWhenClosed, deletePrayerWithReminder, isReminderUpcoming, setPrayerReminder } from '../reminders';
 import { changePrayerStatus, createPrayer, getPrayer, listPrayers, setPrayerReminderFields } from '../repository';
 import { PRAYER_REMINDER_BODY } from '../types';
 
@@ -99,6 +99,39 @@ describe('deletePrayerWithReminder', () => {
 
     expect(getPrayer(db, prayer.id)).toBeNull();
     expect(cancel).toHaveBeenCalledWith('n1');
+  });
+});
+
+describe('clearReminderWhenClosed', () => {
+  test.each(['answered', 'archived'] as const)('cancels the reminder when a prayer becomes %s', async (status) => {
+    const db = createTestDb();
+    const prayer = createPrayer(db, { title: 'A' });
+    setPrayerReminderFields(db, prayer.id, { reminderAt: FUTURE.toISOString(), notificationId: 'n1' });
+
+    await clearReminderWhenClosed(db, prayer.id, status);
+
+    expect(cancel).toHaveBeenCalledWith('n1');
+    expect(getPrayer(db, prayer.id)?.reminderAt).toBeNull();
+  });
+
+  test.each(['praying', 'ongoing'] as const)('keeps the reminder while the prayer is %s', async (status) => {
+    const db = createTestDb();
+    const prayer = createPrayer(db, { title: 'A' });
+    setPrayerReminderFields(db, prayer.id, { reminderAt: FUTURE.toISOString(), notificationId: 'n1' });
+
+    await clearReminderWhenClosed(db, prayer.id, status);
+
+    expect(cancel).not.toHaveBeenCalled();
+    expect(getPrayer(db, prayer.id)?.reminderAt).toBe(FUTURE.toISOString());
+  });
+
+  test('does nothing when no reminder is set', async () => {
+    const db = createTestDb();
+    const prayer = createPrayer(db, { title: 'A' });
+
+    await clearReminderWhenClosed(db, prayer.id, 'answered');
+
+    expect(cancel).not.toHaveBeenCalled();
   });
 });
 
