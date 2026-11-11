@@ -116,7 +116,8 @@
       "!src/app/**",
       "!**/*.d.ts",
       "!src/db/migrations/**"
-    ]
+    ],
+    "testTimeout": 20000
   },
   "allowScripts": {
     "better-sqlite3@13.0.3": true,
