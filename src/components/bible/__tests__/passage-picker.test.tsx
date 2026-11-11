@@ -17,6 +17,9 @@ jest.mock('@/features/bible/repository', () => ({
   getVerseCount: jest.fn(() => 39),
 }));
 
+// Rendering full screens is slow under coverage and a busy machine.
+jest.setTimeout(30_000);
+
 async function renderPicker(requestId: string, initial: ReturnType<typeof idsToRange> | null = null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   return render(

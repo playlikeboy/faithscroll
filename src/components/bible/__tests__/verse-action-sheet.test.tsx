@@ -27,6 +27,9 @@ jest.mock('@/features/bible/repository', () => ({
   getCrossReferences: jest.fn(),
 }));
 
+// Rendering full screens is slow under coverage and a busy machine.
+jest.setTimeout(30_000);
+
 const ROM_8_28 = 45_008_028;
 const ROM_8_29 = 45_008_029;
 

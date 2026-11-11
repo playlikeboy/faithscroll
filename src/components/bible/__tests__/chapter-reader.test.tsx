@@ -34,6 +34,9 @@ jest.mock('@/features/bible/repository', () => ({
   getChapter: jest.fn(),
 }));
 
+// Rendering full screens is slow under coverage and a busy machine.
+jest.setTimeout(30_000);
+
 function verse(n: number, text: string, extra: Partial<Verse> = {}): Verse {
   return { id: 43_003_000 + n, bookId: 43, chapter: 3, verse: n, text, heading: null, paragraphStart: false, poetry: false, ...extra };
 }

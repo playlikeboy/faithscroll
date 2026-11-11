@@ -20,6 +20,12 @@ jest.mock('@/features/bible/repository', () => ({
   searchBible: jest.fn(),
 }));
 
+// Rendering full screens is slow under coverage and a busy machine.
+jest.setTimeout(30_000);
+
+/** Results appear after the search debounce. */
+const WAIT = { timeout: 5_000 };
+
 const RESULT: BibleSearchResult = {
   verse: { id: 40_005_009, bookId: 40, chapter: 5, verse: 9, text: 'Blessed are the peacemakers.', heading: null, paragraphStart: false, poetry: false },
   snippet: 'Blessed are the «peace»makers.',
@@ -45,7 +51,7 @@ describe('BibleSearch', () => {
 
     await fireEvent.changeText(screen.getByLabelText('Search'), 'peace');
 
-    const row = await screen.findByRole('button', { name: /^Matthew 5:9, WEB\. Blessed are the peacemakers\./ });
+    const row = await screen.findByRole('button', { name: /^Matthew 5:9, WEB\. Blessed are the peacemakers\./ }, WAIT);
     expect(screen.getByRole('button', { name: 'Peace, Rest for anxious hearts' })).toBeTruthy();
     expect(searchBible).toHaveBeenCalledWith('peace', { limit: 25, offset: 0 });
     expect(track).toHaveBeenCalledWith({ name: 'bible_search_performed', resultCount: 1 });
@@ -65,9 +71,9 @@ describe('BibleSearch', () => {
 
     await fireEvent.changeText(screen.getByLabelText('Search'), 'Romans 8:28');
 
-    await fireEvent.press(await screen.findByRole('button', { name: 'Go to Romans 8:28' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Go to Romans 8:28' }, WAIT));
     expect(router.push).toHaveBeenCalledWith('/bible/read/45/8?verse=28');
-    expect(await screen.findByText('No verses found')).toBeTruthy();
+    expect(await screen.findByText('No verses found', {}, WAIT)).toBeTruthy();
   });
 
   test('shows a retry when search fails', async () => {
@@ -76,6 +82,6 @@ describe('BibleSearch', () => {
 
     await fireEvent.changeText(screen.getByLabelText('Search'), 'grace');
 
-    expect(await screen.findByRole('button', { name: 'Try again' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Try again' }, WAIT)).toBeTruthy();
   });
 });

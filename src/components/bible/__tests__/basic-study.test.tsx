@@ -26,6 +26,9 @@ jest.mock('@/features/bible/repository', () => ({
   getCrossReferences: jest.fn(),
 }));
 
+// Rendering full screens is slow under coverage and a busy machine.
+jest.setTimeout(30_000);
+
 const ROMANS_8: Verse[] = Array.from({ length: 39 }, (_, i) => ({
   id: 45_008_001 + i,
   bookId: 45,

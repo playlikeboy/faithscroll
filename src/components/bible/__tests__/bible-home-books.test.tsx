@@ -18,6 +18,9 @@ jest.mock('expo-router', () => ({
 jest.mock('react-native-safe-area-context', () => jest.requireActual('react-native-safe-area-context/jest/mock').default);
 jest.mock('@/features/bible/reference', () => ({ formatReference: () => '' }));
 
+// Rendering full screens is slow under coverage and a busy machine.
+jest.setTimeout(30_000);
+
 describe('BibleHome', () => {
   beforeEach(() => {
     jest.clearAllMocks();

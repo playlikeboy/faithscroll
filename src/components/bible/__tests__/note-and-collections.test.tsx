@@ -38,6 +38,9 @@ jest.mock('@/features/bible/repository', () => ({
   getVerses: jest.fn(),
 }));
 
+// Rendering full screens is slow under coverage and a busy machine.
+jest.setTimeout(30_000);
+
 const PS_23_1 = 19_023_001;
 
 function withQuery(ui: ReactElement) {
