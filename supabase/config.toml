@@ -1,0 +1,97 @@
+# Supabase CLI configuration for Faithscroll (local development + `supabase link`/`db push`).
+# Hosted-project settings (Apple provider, email templates, secrets) are described in docs/BACKEND.md.
+project_id = "faithscroll"
+
+[api]
+enabled = true
+port = 54321
+# Only the public schema is exposed through the Data API. Helper functions live in `private`.
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+# Hard cap on rows per request; the sync engine pages well below this.
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.pooler]
+enabled = false
+
+[db.migrations]
+enabled = true
+schema_paths = []
+
+[db.seed]
+enabled = false
+
+[realtime]
+enabled = false
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+# Local email testing UI (catches one-time sign-in codes during development).
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = "500MiB"
+
+[auth]
+enabled = true
+# The app never uses redirects for auth (native Apple + email one-time code), but the
+# CLI requires a site URL. The scheme matches app.json.
+site_url = "faithscroll://"
+additional_redirect_urls = ["faithscroll://"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+enable_anonymous_sign_ins = false
+enable_manual_linking = false
+minimum_password_length = 12
+
+[auth.rate_limit]
+email_sent = 6
+token_refresh = 150
+sign_in_sign_ups = 30
+token_verifications = 30
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+# One-time codes are verified in-app; no confirmation link is needed.
+enable_confirmations = false
+secure_password_change = true
+max_frequency = "60s"
+otp_length = 6
+otp_expiry = 900
+
+[auth.sms]
+enable_signup = false
+
+[auth.external.apple]
+# Native Sign in with Apple (signInWithIdToken). client_id must list the iOS bundle id
+# (app.faithscroll.ios) plus any development-build variants, comma separated.
+# A secret is only needed for web/Android OAuth, which Faithscroll does not use.
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_APPLE_CLIENT_ID)"
+secret = ""
+skip_nonce_check = false
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+deno_version = 2
+
+[functions.delete-account]
+# The platform verifies the caller's JWT before the function runs; the function verifies it again.
+verify_jwt = true
+
+[analytics]
+enabled = false
