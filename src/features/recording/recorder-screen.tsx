@@ -11,6 +11,7 @@ import { RecordingIndicator, type IndicatorState } from '@/components/sermons/re
 import { RecordingWaveform } from '@/components/sermons/recording-waveform';
 import { Card, FaithText, Icon, IconButton } from '@/components/ui';
 import { spokenDuration } from '@/features/editor';
+import { sermonHref } from '@/features/sermons/routes';
 import { useSermonNotesDraft } from '@/features/sermons/use-sermon-notes-draft';
 import { usePickPassage } from '@/features/sermons/use-pick-passage';
 import { formatDuration } from '@/lib/time';
@@ -69,7 +70,7 @@ export function RecorderScreen({ sermonId, title, returnToDetail }: RecorderScre
 
   const leave = () => {
     allowRemovalRef.current();
-    if (returnToDetail) router.replace({ pathname: '/sermons/[id]', params: { id: sermonId } });
+    if (returnToDetail) router.replace(sermonHref(sermonId));
     else router.back();
   };
 

@@ -7,6 +7,7 @@ import { db } from '@/db/client';
 import { useSeriesList } from '@/features/sermons/hooks';
 import { createSermonFromForm } from '@/features/sermons/save-sermon-form';
 import { emptySermonForm, type SermonFormOutput } from '@/features/sermons/sermon-form-schema';
+import { sermonHref } from '@/features/sermons/routes';
 import { usePickPassage } from '@/features/sermons/use-pick-passage';
 import { logger } from '@/lib/logger';
 import { track } from '@/services/monitoring/analytics';
@@ -32,7 +33,7 @@ export default function NewSermonScreen() {
       if (next === 'record') {
         router.replace({ pathname: '/sermons/record/[id]', params: { id: sermon.id, then: 'detail' } });
       } else {
-        router.replace({ pathname: '/sermons/[id]', params: { id: sermon.id } });
+        router.replace(sermonHref(sermon.id));
       }
     } catch (error) {
       logger.error('Could not create sermon', error);

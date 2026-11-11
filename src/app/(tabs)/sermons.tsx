@@ -10,6 +10,7 @@ import { SeriesCard } from '@/components/sermons/series-card';
 import { SermonCard } from '@/components/sermons/sermon-card';
 import { useRecordingRecovery } from '@/features/recording/use-recording-recovery';
 import { useSeriesList, useSermonList } from '@/features/sermons/hooks';
+import { seriesHref, sermonHref } from '@/features/sermons/routes';
 import { useDebouncedValue } from '@/features/sermons/use-debounced-value';
 import { GUTTER, useTheme } from '@/theme';
 
@@ -31,8 +32,8 @@ export default function SermonsScreen() {
   const series = useSeriesList(debouncedQuery);
   const recovery = useRecordingRecovery();
 
-  const openSermon = (id: string) => router.push({ pathname: '/sermons/[id]', params: { id } });
-  const openSeries = (id: string) => router.push({ pathname: '/sermons/series/[id]', params: { id } });
+  const openSermon = (id: string) => router.push(sermonHref(id));
+  const openSeries = (id: string) => router.push(seriesHref(id));
   const newSermon = () => router.push('/sermons/new');
 
   const header = (
