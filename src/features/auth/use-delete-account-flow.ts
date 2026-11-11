@@ -26,10 +26,12 @@ export interface DeleteAccountFlow {
 export interface DeleteAccountOptions {
   /** Runs after a successful deletion when the user keeps data on this device. */
   keepLocalData?: (db: AppDatabase) => Promise<void> | void;
+  /** Runs after every successful deletion (after local cleanup). */
+  afterDeletion?: () => void;
 }
 
 export function useDeleteAccountFlow(db: AppDatabase, options: DeleteAccountOptions = {}): DeleteAccountFlow {
-  const { keepLocalData } = options;
+  const { keepLocalData, afterDeletion } = options;
   const [step, setStep] = useState<DeleteStep>('idle');
   const [eraseLocal, setEraseLocal] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,8 +61,9 @@ export function useDeleteAccountFlow(db: AppDatabase, options: DeleteAccountOpti
         'Your account has been deleted, but some data on this device could not be erased. You can remove it in Settings › Data.',
       );
     }
+    afterDeletion?.();
     setStep('done');
-  }, [db, eraseLocal, keepLocalData]);
+  }, [db, eraseLocal, keepLocalData, afterDeletion]);
 
   const confirm = useCallback(() => {
     const detail = eraseLocal

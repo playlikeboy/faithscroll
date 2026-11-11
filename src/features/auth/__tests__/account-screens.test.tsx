@@ -10,7 +10,7 @@ import { resetSessionStoreForTests, useSessionStore } from '../session-store';
 
 const mockAuth = {
   onAuthStateChange: jest.fn(() => ({ data: { subscription: { unsubscribe: jest.fn() } } })),
-  getSession: jest.fn(async () => ({ data: { session: null }, error: null })),
+  getSession: jest.fn(async (): Promise<{ data: { session: unknown }; error: null }> => ({ data: { session: null }, error: null })),
   signInWithOtp: jest.fn(async () => ({ data: {}, error: null })),
   verifyOtp: jest.fn(async () => ({ data: {}, error: null })),
   signOut: jest.fn(async () => ({ error: null })),
@@ -40,8 +40,14 @@ jest.mock('expo-apple-authentication', () => {
   };
 });
 
+function signIn(session: unknown): void {
+  mockAuth.getSession.mockResolvedValue({ data: { session }, error: null });
+  useSessionStore.setState({ session: session as never, isLoading: false });
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
+  mockAuth.getSession.mockResolvedValue({ data: { session: null }, error: null });
   mockClient = { auth: mockAuth, functions: { invoke: mockInvoke } };
   resetSessionStoreForTests();
 });
@@ -105,7 +111,7 @@ describe('AccountView', () => {
   test('signed in: shows the email and deletes the account after two confirmations', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     const keepLocalData = jest.fn();
-    useSessionStore.setState({ session: { user: { id: 'u1', email: 'grace@example.com' } } as never, isLoading: false });
+    signIn({ user: { id: 'u1', email: 'grace@example.com' } });
     await render(<AccountView db={db} isConfigured onSignIn={jest.fn()} deleteOptions={{ keepLocalData }} />);
     await act(async () => undefined);
 
@@ -129,7 +135,7 @@ describe('AccountView', () => {
   });
 
   test('signed in: cancelling the review keeps the account', async () => {
-    useSessionStore.setState({ session: { user: { id: 'u1', email: 'a@b.co' } } as never, isLoading: false });
+    signIn({ user: { id: 'u1', email: 'a@b.co' } });
     await render(<AccountView db={db} isConfigured onSignIn={jest.fn()} />);
     await act(async () => undefined);
 
@@ -141,7 +147,7 @@ describe('AccountView', () => {
   });
 
   test('signed in: sign out calls Supabase', async () => {
-    useSessionStore.setState({ session: { user: { id: 'u1', email: 'a@b.co' } } as never, isLoading: false });
+    signIn({ user: { id: 'u1', email: 'a@b.co' } });
     await render(<AccountView db={db} isConfigured onSignIn={jest.fn()} />);
     await act(async () => undefined);
 

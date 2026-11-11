@@ -35,6 +35,7 @@ export function startSessionListener(): void {
     return;
   }
 
+  useSessionStore.setState({ isLoading: true });
   const { data } = supabase.auth.onAuthStateChange((_event, session) => {
     useSessionStore.setState({ session, isLoading: false });
   });
