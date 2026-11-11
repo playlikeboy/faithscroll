@@ -11,7 +11,8 @@
 
 /** Transcription provider upload limit (25 MB). */
 export const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
-export const MAX_TRANSCRIBE_PARTS = 12;
+/** Recording parts are checkpointed every 10 minutes (and on pause), so long services have many. */
+export const MAX_TRANSCRIBE_PARTS = 30;
 /** ~4 hours of audio per sermon. */
 export const MAX_TRANSCRIBE_SECONDS = 4 * 60 * 60;
 export const MAX_RECAP_CHARS = 200_000;
