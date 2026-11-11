@@ -1,6 +1,6 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
-import { getChapter, getCrossReferences, getVerses } from '../repository';
+import { getChapter, getCrossReferences, getVerseCount, getVerses } from '../repository';
 import type { Verse, VerseRange } from '../types';
 import { rangeToIds } from '../verse-id';
 
@@ -13,6 +13,19 @@ export function useChapter(bookId: number, chapter: number): UseQueryResult<Vers
     queryFn: () => getChapter(bookId, chapter),
     staleTime: BIBLE_STALE_TIME,
   });
+}
+
+/** Verses in a chapter: the synchronous count when known, else the loaded chapter length (0 while unknown). */
+export function useVerseCount(bookId: number, chapter: number): { count: number; isLoading: boolean } {
+  const known = bookId > 0 && chapter > 0 ? getVerseCount(bookId, chapter) : 0;
+  const query = useQuery({
+    queryKey: ['bible', 'chapter', bookId, chapter],
+    queryFn: () => getChapter(bookId, chapter),
+    enabled: known === 0 && bookId > 0 && chapter > 0,
+    staleTime: BIBLE_STALE_TIME,
+  });
+  if (known > 0) return { count: known, isLoading: false };
+  return { count: query.data?.length ?? 0, isLoading: query.isLoading };
 }
 
 export function useVerses(range: VerseRange | null): UseQueryResult<Verse[]> {
