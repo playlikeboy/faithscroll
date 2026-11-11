@@ -1,6 +1,7 @@
 # Supabase CLI configuration for Faithscroll (local development + `supabase link`/`db push`).
 # Hosted-project settings (Apple provider, email templates, secrets) are described in docs/BACKEND.md.
-project_id = "faithscroll"
+# Hosted project ref (link with `npx supabase link --project-ref ymqbbpiymkrpwhpguvkm`). No keys here.
+project_id = "ymqbbpiymkrpwhpguvkm"
 
 [api]
 enabled = true
@@ -96,7 +97,11 @@ verify_jwt = true
 [functions.revenuecat-webhook]
 # RevenueCat cannot send a Supabase JWT. The function authenticates every call itself with the
 # REVENUECAT_WEBHOOK_AUTH secret (Authorization header configured in the RevenueCat dashboard).
-# All ai-* functions keep the default JWT verification.
+# The other ai-* functions keep the default JWT verification.
+verify_jwt = false
+
+[functions.ai-retention]
+# Scheduled purge job: called by pg_cron/scheduler with the AI_RETENTION_SECRET secret, not a user JWT.
 verify_jwt = false
 
 [analytics]
