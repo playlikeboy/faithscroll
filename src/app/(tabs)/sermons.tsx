@@ -5,8 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EmptyState, ErrorState } from '@/components/ui';
 import { LibraryHeader, type LibraryMode } from '@/components/sermons/library-header';
+import { RecoveryNotice } from '@/components/sermons/recovery-notice';
 import { SeriesCard } from '@/components/sermons/series-card';
 import { SermonCard } from '@/components/sermons/sermon-card';
+import { useRecordingRecovery } from '@/features/recording/use-recording-recovery';
 import { useSeriesList, useSermonList } from '@/features/sermons/hooks';
 import { useDebouncedValue } from '@/features/sermons/use-debounced-value';
 import { GUTTER, useTheme } from '@/theme';
@@ -27,6 +29,7 @@ export default function SermonsScreen() {
   const debouncedQuery = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
   const sermons = useSermonList({ query: debouncedQuery, limit });
   const series = useSeriesList(debouncedQuery);
+  const recovery = useRecordingRecovery();
 
   const openSermon = (id: string) => router.push({ pathname: '/sermons/[id]', params: { id } });
   const openSeries = (id: string) => router.push({ pathname: '/sermons/series/[id]', params: { id } });
@@ -39,6 +42,7 @@ export default function SermonsScreen() {
       query={query}
       onChangeQuery={setQuery}
       onNewSermon={newSermon}
+      notice={recovery.notice ? <RecoveryNotice notice={recovery.notice} onDismiss={recovery.dismiss} onOpenSermon={openSermon} /> : null}
     />
   );
   const isSearching = debouncedQuery.length > 0;
