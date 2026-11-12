@@ -1,11 +1,13 @@
 import { Stack, useRouter } from 'expo-router';
 import { StyleSheet, Switch, View } from 'react-native';
 
+import { SampleContentSection } from '@/components/settings/sample-content-section';
 import { FaithButton, FaithText, ListRow, Screen, Section } from '@/components/ui';
 import { db } from '@/db/client';
 import { confirmDeleteAllLocalData } from '@/features/export/confirm-delete';
 import { PRIVACY_PROMISES } from '@/features/export/legal-content';
 import { useDeleteLocalData, useExportData, type ActionStatus } from '@/features/export/use-data-actions';
+import { useSampleContent } from '@/features/seed/use-sample-content';
 import { setAnalyticsEnabled, useAnalyticsEnabled } from '@/services/monitoring/analytics';
 import { useAnalyticsConsentHydrated } from '@/services/monitoring/analytics-consent';
 import { useTheme } from '@/theme';
@@ -28,6 +30,7 @@ export default function YourDataScreen() {
   const { colors } = useTheme();
   const { status: exportStatus, exportData } = useExportData(db);
   const { status: deleteStatus, deleteAll } = useDeleteLocalData(db);
+  const samples = useSampleContent(db);
   const analyticsEnabled = useAnalyticsEnabled();
   const consentLoaded = useAnalyticsConsentHydrated();
   const busy = exportStatus.kind === 'working' || deleteStatus.kind === 'working';
@@ -77,6 +80,13 @@ export default function YourDataScreen() {
           }
         />
       </Section>
+
+      <SampleContentSection
+        hasSamples={samples.hasSamples}
+        status={samples.status}
+        isDisabled={busy}
+        onRemove={() => void samples.removeSamples()}
+      />
 
       <Section title="Delete data">
         <FaithText variant="secondary">
