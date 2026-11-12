@@ -1,134 +1,142 @@
-import { router, Stack, type Href } from 'expo-router';
-import { useState } from 'react';
-import { SectionList, StyleSheet, View } from 'react-native';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, SectionList, StyleSheet, View } from 'react-native';
 
+import { BibleVerseResultRow } from '@/components/library/bible-verse-result-row';
 import { SearchField } from '@/components/library/search-field';
 import { SearchResultRow } from '@/components/library/search-result-row';
-import { Card, Chip, Divider, EmptyState, ErrorState, FaithButton, FaithText, Screen } from '@/components/ui';
-import { isSearchable } from '@/features/search/query';
-import type { PassageResult, SearchResult, SearchResultType, TagResult } from '@/features/search/types';
+import { DictionaryResultRow, TopicResultRow } from '@/components/library/study-result-rows';
+import { AlsoSearching, PassageCard, SuggestedSearches, TagChips } from '@/components/library/universal-search-parts';
+import { Divider, EmptyState, ErrorState, FaithButton, FaithText, Screen } from '@/components/ui';
+import { TOPICS_ATTRIBUTION } from '@/features/bible/study-data/repository';
+import { studyRoutes } from '@/features/bible/study-data/routes';
+import { passageHref } from '@/features/links/routes';
+import type { SemanticVerseResult } from '@/features/search/semantic/types';
+import { SUGGESTED_SEARCHES } from '@/features/search/suggestions';
+import { buildSearchSections, type SearchRow, type SearchSection } from '@/features/search/universal-sections';
 import { useUniversalSearch } from '@/features/search/use-universal-search';
-import { GUTTER } from '@/theme';
+import { GUTTER, useTheme } from '@/theme';
 
 /** Results are paged (5 per group), so render a full first page without waiting for scroll. */
 const INITIAL_ROWS = 40;
 
-interface ResultSection {
-  key: string;
-  type: SearchResultType | null;
-  title: string;
-  hasMore: boolean;
-  data: SearchResult[];
+const firstParam = (value: string | string[] | undefined): string => (Array.isArray(value) ? (value[0] ?? '') : (value ?? ''));
+
+function openVerse(verse: SemanticVerseResult) {
+  router.push(passageHref(verse.startVerseId));
 }
 
-function PassageCard({ passage }: { passage: PassageResult }) {
-  return (
-    <Card>
-      <View style={styles.passage}>
-        <FaithText variant="label">Bible passage</FaithText>
-        <FaithText variant="title">{passage.reference}</FaithText>
-        <FaithButton label={`Read ${passage.reference}`} icon="bible" onPress={() => router.push(passage.href)} />
-        <FaithText variant="secondary">
-          {passage.related.length === 0
-            ? 'Nothing in your library mentions this passage yet.'
-            : `In your library (${passage.related.length})`}
-        </FaithText>
-        {passage.related.map((result, index) => (
-          <View key={`${result.type}:${result.id}`}>
-            {index > 0 ? <Divider /> : null}
-            <SearchResultRow result={result} onPress={() => router.push(result.href)} />
-          </View>
-        ))}
-      </View>
-    </Card>
-  );
+function Row({ row }: { row: SearchRow }) {
+  switch (row.kind) {
+    case 'personal':
+      return <SearchResultRow result={row.result} onPress={() => router.push(row.result.href)} />;
+    case 'verse':
+      return <BibleVerseResultRow result={row.verse} onPress={openVerse} />;
+    case 'topic':
+      return <TopicResultRow topic={row.topic} onPress={(topic) => router.push(studyRoutes.topic(topic.id))} />;
+    case 'dictionary':
+      return <DictionaryResultRow entry={row.entry} onPress={(entry) => router.push(studyRoutes.dictionary(entry.id))} />;
+  }
 }
 
-function TagChips({ tags, onSelect }: { tags: TagResult[]; onSelect: (name: string) => void }) {
-  if (tags.length === 0) return null;
-  return (
-    <View style={styles.tags}>
-      <FaithText variant="label">Tags</FaithText>
-      <View style={styles.tagRow}>
-        {tags.map((tag) => (
-          <Chip
-            key={tag.id}
-            icon="tag"
-            label={`${tag.name} · ${tag.itemCount}`}
-            accessibilityHint={`Searches for items tagged ${tag.name}`}
-            onPress={() => onSelect(tag.name)}
-          />
-        ))}
-      </View>
-    </View>
-  );
+interface SectionFooterProps {
+  section: SearchSection;
+  query: string;
+  onLoadMore: (section: SearchSection) => void;
 }
 
-function Intro() {
-  return (
-    <FaithText variant="secondary" style={styles.intro}>
-      Search your journal, prayers, sermons, Bible notes, actions and collections — or type a reference like Romans 8:28 to
-      see everything connected to it. Your search stays on this device.
-    </FaithText>
-  );
+function SectionFooter({ section, query, onLoadMore }: SectionFooterProps) {
+  if (section.hasMore && section.moreType) {
+    return (
+      <FaithButton
+        label={`Show more ${section.title.toLowerCase()}`}
+        variant="secondary"
+        onPress={() => onLoadMore(section)}
+        style={styles.more}
+      />
+    );
+  }
+  if (section.kind === 'bible') {
+    return (
+      <FaithButton
+        label="More Bible results"
+        icon="bible"
+        variant="ghost"
+        onPress={() => router.push(studyRoutes.bibleSearch(query))}
+        style={styles.more}
+      />
+    );
+  }
+  if (section.kind === 'topics') {
+    return (
+      <FaithText variant="caption" style={styles.attribution}>
+        {TOPICS_ATTRIBUTION}
+      </FaithText>
+    );
+  }
+  return null;
 }
 
 export default function SearchScreen() {
-  const [text, setText] = useState('');
+  const params = useLocalSearchParams<{ q?: string | string[] }>();
+  const { colors } = useTheme();
+  const [text, setText] = useState(() => firstParam(params.q));
   const search = useUniversalSearch(text);
-  const { response } = search;
+  const { response, bible } = search;
+  const loadMore = search.loadMore;
 
-  const sections: ResultSection[] = [
-    ...search.groups.map((group) => ({ key: group.type, type: group.type, title: group.label, hasMore: group.hasMore, data: group.results })),
-    ...(search.scripture.length > 0
-      ? [{ key: 'scripture', type: null, title: 'Saved verses & highlights', hasMore: false, data: search.scripture }]
-      : []),
-  ];
+  const sections = buildSearchSections(search.groups, search.scripture, bible);
   const hasQuery = search.query.length > 0;
   const nothingFound =
-    hasQuery && !!response && !search.isSearching && sections.length === 0 && !response.passage && response.tags.length === 0;
+    hasQuery &&
+    !!response &&
+    !search.isSearching &&
+    !search.bibleError &&
+    sections.length === 0 &&
+    !response.passage &&
+    response.tags.length === 0;
+
+  const onLoadMore = useCallback((section: SearchSection) => section.moreType && loadMore(section.moreType), [loadMore]);
 
   const header = (
     <View style={styles.header}>
       {response?.passage ? <PassageCard passage={response.passage} /> : null}
+      <AlsoSearching words={bible.alsoSearching.length > 0 ? bible.alsoSearching : (response?.alsoSearching ?? [])} onSelect={setText} />
       <TagChips tags={response?.tags ?? []} onSelect={setText} />
     </View>
   );
 
-  const footer =
-    hasQuery && isSearchable(search.query) ? (
-      <View style={styles.footer}>
-        <FaithButton
-          label="Search the Bible text instead"
-          icon="bible"
-          variant="ghost"
-          onPress={() => router.push(`/bible/search?q=${encodeURIComponent(search.query)}` as Href)}
-        />
-      </View>
-    ) : undefined;
+  const footer = (
+    <View style={styles.footer}>
+      {search.isSearchingBible ? <ActivityIndicator color={colors.primaryText} accessibilityLabel="Searching the Bible" /> : null}
+      {search.bibleError ? (
+        <FaithText variant="secondary">The Bible couldn’t be searched just now. Your own notes are still shown.</FaithText>
+      ) : null}
+    </View>
+  );
 
   return (
     <Screen edges={[]} scroll={false} contentPadding={false}>
       <Stack.Screen options={{ title: 'Search' }} />
       <View style={styles.fieldWrap}>
-        <SearchField value={text} onChangeText={setText} />
+        <SearchField value={text} onChangeText={setText} placeholder="Search the Bible and your library" />
       </View>
       {search.error ? (
         <ErrorState message="Search isn’t working right now. Please try again." />
       ) : !hasQuery ? (
         <View style={styles.padded}>
-          <Intro />
+          <SuggestedSearches suggestions={SUGGESTED_SEARCHES} onSelect={setText} />
         </View>
       ) : nothingFound ? (
         <EmptyState
           icon="search"
           title="Nothing found"
-          message={`Nothing in your library matches “${search.query}”. Try another word, or a Bible reference like Romans 8:28.`}
+          message={`Nothing matches “${search.query}”. Try another word, a feeling like “worry”, or a Bible reference like Romans 8:28.`}
         />
       ) : (
-        <SectionList
+        <SectionList<SearchRow, SearchSection>
           sections={sections}
-          keyExtractor={(item) => `${item.type}:${item.id}`}
+          keyExtractor={(item) => item.key}
           contentContainerStyle={styles.list}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
@@ -142,17 +150,8 @@ export default function SearchScreen() {
               {section.title}
             </FaithText>
           )}
-          renderSectionFooter={({ section }) =>
-            section.hasMore && section.type ? (
-              <FaithButton
-                label={`Show more ${section.title.toLowerCase()}`}
-                variant="secondary"
-                onPress={() => section.type && search.loadMore(section.type)}
-                style={styles.more}
-              />
-            ) : null
-          }
-          renderItem={({ item }) => <SearchResultRow result={item} onPress={() => router.push(item.href)} />}
+          renderSectionFooter={({ section }) => <SectionFooter section={section} query={search.query} onLoadMore={onLoadMore} />}
+          renderItem={({ item }) => <Row row={item} />}
         />
       )}
     </Screen>
@@ -162,13 +161,10 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   fieldWrap: { paddingHorizontal: GUTTER, paddingTop: 12, paddingBottom: 4 },
   padded: { paddingHorizontal: GUTTER },
-  intro: { paddingTop: 16 },
   list: { paddingHorizontal: GUTTER, paddingBottom: 48 },
   header: { gap: 16, paddingTop: 12 },
-  passage: { gap: 10 },
-  tags: { gap: 8 },
-  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   sectionTitle: { marginTop: 24, marginBottom: 4 },
   more: { marginTop: 8 },
-  footer: { paddingTop: 24 },
+  attribution: { marginTop: 8 },
+  footer: { paddingTop: 24, gap: 12 },
 });

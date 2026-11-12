@@ -46,6 +46,8 @@ export interface PassageResult {
 export interface SearchResponse {
   query: string;
   terms: string[];
+  /** Related words also searched ("Also searching: worry · peace · rest"). */
+  alsoSearching: string[];
   passage: PassageResult | null;
   groups: SearchGroup[];
   tags: TagResult[];

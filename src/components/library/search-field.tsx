@@ -18,7 +18,7 @@ export function SearchField({ value, onChangeText, placeholder = 'Search your li
       <TextInput
         accessibilityRole="search"
         accessibilityLabel="Search your library"
-        accessibilityHint="Searches journal, prayers, sermons, notes, actions and collections, or type a Bible reference"
+        accessibilityHint="Searches the Bible by topic, the Bible dictionary, and your journal, prayers, sermons and notes. You can also type a Bible reference"
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}

@@ -29,7 +29,7 @@ import { journalEntryTitle } from '@/features/links/resolve';
 import { describeVerseRange } from '@/features/links/reference-text';
 import { PRAYER_STATUS_LABELS } from '@/features/prayers/types';
 
-import { allTermsMatch, contains } from './query';
+import { allTermsMatch, contains, type TermGroup } from './query';
 import { firstSnippet } from './snippet';
 import { GROUP_LABELS, type SearchGroup, type SearchResult, type SearchResultType } from './types';
 
@@ -63,7 +63,7 @@ function tagMatch(entityType: LinkableType, idColumn: SQLiteColumn, term: string
     and ${tags.deletedAt} is null and ${contains(tags.name, term)})`;
 }
 
-function searchJournal(db: AppDatabase, terms: string[], page: PageOptions): SearchResult[] {
+function searchJournal(db: AppDatabase, terms: readonly TermGroup[], page: PageOptions): SearchResult[] {
   const rows = db
     .select()
     .from(journalEntries)
@@ -87,12 +87,12 @@ function searchJournal(db: AppDatabase, terms: string[], page: PageOptions): Sea
     id: row.id,
     title: journalEntryTitle(row),
     subtitle: join([JOURNAL_TYPE_LABELS[row.entryType], formatCalendarDate(row.entryDate)]),
-    snippet: firstSnippet([row.content, row.prompt], terms),
+    snippet: firstSnippet([row.content, row.prompt], terms.flat()),
     href: `/journal/${encodeURIComponent(row.id)}` as Href,
   }));
 }
 
-function searchPrayers(db: AppDatabase, terms: string[], page: PageOptions): SearchResult[] {
+function searchPrayers(db: AppDatabase, terms: readonly TermGroup[], page: PageOptions): SearchResult[] {
   const updateMatch = (term: string) => sql`exists (select 1 from ${prayerUpdates}
     where ${prayerUpdates.prayerId} = ${outer(prayerEntries.id)} and ${prayerUpdates.deletedAt} is null
     and ${contains(prayerUpdates.content, term)})`;
@@ -101,7 +101,7 @@ function searchPrayers(db: AppDatabase, terms: string[], page: PageOptions): Sea
       row: prayerEntries,
       updateText: sql<string | null>`(select ${prayerUpdates.content} from ${prayerUpdates}
         where ${prayerUpdates.prayerId} = ${outer(prayerEntries.id)} and ${prayerUpdates.deletedAt} is null
-        and ${contains(prayerUpdates.content, terms[0] ?? '')} limit 1)`,
+        and ${contains(prayerUpdates.content, terms[0]?.[0] ?? '')} limit 1)`,
     })
     .from(prayerEntries)
     .where(
@@ -125,7 +125,7 @@ function searchPrayers(db: AppDatabase, terms: string[], page: PageOptions): Sea
     id: row.id,
     title: row.title.trim() || 'Untitled prayer',
     subtitle: join([PRAYER_STATUS_LABELS[row.status], row.category]),
-    snippet: firstSnippet([row.content, updateText], terms),
+    snippet: firstSnippet([row.content, updateText], terms.flat()),
     href: `/prayers/${encodeURIComponent(row.id)}` as Href,
   }));
 }
@@ -149,8 +149,8 @@ function sermonConditions(term: string): SQL[] {
   ];
 }
 
-function searchSermons(db: AppDatabase, terms: string[], page: PageOptions): SearchResult[] {
-  const first = terms[0] ?? '';
+function searchSermons(db: AppDatabase, terms: readonly TermGroup[], page: PageOptions): SearchResult[] {
+  const first = terms[0]?.[0] ?? '';
   const rows = db
     .select({
       row: sermons,
@@ -174,12 +174,12 @@ function searchSermons(db: AppDatabase, terms: string[], page: PageOptions): Sea
     id: row.id,
     title: row.title.trim() || 'Untitled sermon',
     subtitle: join([row.speaker, row.church, seriesTitle, row.sermonDate ? formatCalendarDate(row.sermonDate) : null]),
-    snippet: firstSnippet([noteText, transcriptText], terms),
+    snippet: firstSnippet([noteText, transcriptText], terms.flat()),
     href: `/sermons/${encodeURIComponent(row.id)}` as Href,
   }));
 }
 
-function searchVerseNotes(db: AppDatabase, terms: string[], page: PageOptions): SearchResult[] {
+function searchVerseNotes(db: AppDatabase, terms: readonly TermGroup[], page: PageOptions): SearchResult[] {
   const rows = db
     .select()
     .from(verseNotes)
@@ -198,12 +198,12 @@ function searchVerseNotes(db: AppDatabase, terms: string[], page: PageOptions): 
     id: row.id,
     title: describeVerseRange(row.startVerseId, row.endVerseId),
     subtitle: 'Bible note',
-    snippet: firstSnippet([row.content], terms),
+    snippet: firstSnippet([row.content], terms.flat()),
     href: `/bible/note/${encodeURIComponent(row.id)}` as Href,
   }));
 }
 
-function searchActions(db: AppDatabase, terms: string[], page: PageOptions): SearchResult[] {
+function searchActions(db: AppDatabase, terms: readonly TermGroup[], page: PageOptions): SearchResult[] {
   const rows = db
     .select()
     .from(actionItems)
@@ -226,12 +226,12 @@ function searchActions(db: AppDatabase, terms: string[], page: PageOptions): Sea
     id: row.id,
     title: row.title,
     subtitle: row.completedAt ? 'Done' : 'Open',
-    snippet: firstSnippet([row.notes], terms),
+    snippet: firstSnippet([row.notes], terms.flat()),
     href: '/library/actions' as Href,
   }));
 }
 
-function searchCollections(db: AppDatabase, terms: string[], page: PageOptions): SearchResult[] {
+function searchCollections(db: AppDatabase, terms: readonly TermGroup[], page: PageOptions): SearchResult[] {
   const rows = db
     .select()
     .from(collections)
@@ -250,12 +250,12 @@ function searchCollections(db: AppDatabase, terms: string[], page: PageOptions):
     id: row.id,
     title: row.title,
     subtitle: 'Collection',
-    snippet: firstSnippet([row.description], terms),
+    snippet: firstSnippet([row.description], terms.flat()),
     href: `/library/collections/${encodeURIComponent(row.id)}` as Href,
   }));
 }
 
-const SEARCHERS: Readonly<Record<PersonalType, (db: AppDatabase, terms: string[], page: PageOptions) => SearchResult[]>> = {
+const SEARCHERS: Readonly<Record<PersonalType, (db: AppDatabase, terms: readonly TermGroup[], page: PageOptions) => SearchResult[]>> = {
   journal_entry: searchJournal,
   prayer_entry: searchPrayers,
   sermon: searchSermons,
@@ -265,7 +265,7 @@ const SEARCHERS: Readonly<Record<PersonalType, (db: AppDatabase, terms: string[]
 };
 
 /** One page of one result type. Fetches one extra row to know whether more exist. */
-export function searchPersonalGroup(db: AppDatabase, type: PersonalType, terms: string[], page: PageOptions): SearchGroup {
+export function searchPersonalGroup(db: AppDatabase, type: PersonalType, terms: readonly TermGroup[], page: PageOptions): SearchGroup {
   if (terms.length === 0) return { type, label: GROUP_LABELS[type], results: [], hasMore: false };
   const rows = SEARCHERS[type](db, terms, { limit: page.limit + 1, offset: page.offset });
   return { type, label: GROUP_LABELS[type], results: rows.slice(0, page.limit), hasMore: rows.length > page.limit };

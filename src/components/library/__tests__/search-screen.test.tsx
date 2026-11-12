@@ -15,6 +15,7 @@ jest.mock('@/db/client', () => ({ db: jest.requireActual('@/db/testing/create-te
 jest.mock('expo-router', () => ({
   router: { push: jest.fn() },
   Stack: { Screen: () => null },
+  useLocalSearchParams: () => ({}),
 }));
 jest.mock('@/services/monitoring/analytics', () => ({ track: jest.fn() }));
 jest.mock('@/features/bible/repository', () => ({
@@ -25,6 +26,34 @@ jest.mock('@/features/bible/repository', () => ({
     },
   ])),
 }));
+jest.mock('@/features/search/bible-sections', () => {
+  const empty = { query: '', verses: [], topics: [], dictionary: [], alsoSearching: [] };
+  return {
+    EMPTY_BIBLE_SECTIONS: empty,
+    searchBibleSections: jest.fn(async (query: string) =>
+      !query.includes('forgiv')
+        ? { ...empty, query }
+        : {
+            query,
+            verses: [
+              {
+                startVerseId: 40006014,
+                endVerseId: 40006014,
+                reference: 'Matthew 6:14',
+                text: 'For if you forgive men their trespasses, your heavenly Father will also forgive you.',
+                snippet: 'For if you «forgive» men their trespasses, your heavenly Father will also «forgive» you.',
+                matchedVia: { kind: 'all-words', label: 'Matches your words' },
+                topic: 'Forgiveness',
+                score: 5000,
+              },
+            ],
+            topics: [{ id: 3801, name: 'Forgiveness', verseCount: 55 }],
+            dictionary: [{ id: 1200, term: 'Forgiveness of sin', preview: 'One of the constituent parts of justification.' }],
+            alsoSearching: ['pardon', 'mercy'],
+          },
+    ),
+  };
+});
 
 function renderScreen() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -67,9 +96,35 @@ beforeEach(() => {
 afterEach(() => jest.useRealTimers());
 
 describe('universal search screen', () => {
-  it('explains what can be searched before typing', async () => {
+  it('explains what can be searched and suggests searches before typing', async () => {
     await renderScreen();
     expect(screen.getByText(/Your search stays on this device/)).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'forgiveness' }));
+    expect(screen.getByDisplayValue('forgiveness')).toBeTruthy();
+  });
+
+  it('always shows Bible results, topics and dictionary entries with related words', async () => {
+    await renderScreen();
+    await typeQuery('forgiveness');
+
+    expect(await screen.findByRole('header', { name: 'From the Bible' })).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Topics' })).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Dictionary' })).toBeTruthy();
+    expect(screen.getByText('Matches your words · Topic: Forgiveness')).toBeTruthy();
+    expect(screen.getByText(/OpenBible\.info \(CC BY 4\.0\)/)).toBeTruthy();
+    expect(screen.getByText('Also searching related words')).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole('button', { name: /^Matthew 6:14\./ }));
+    expect(router.push).toHaveBeenCalledWith('/bible/read/40/6?verse=14');
+    await fireEvent.press(screen.getByRole('button', { name: 'Forgiveness, 55 passages' }));
+    expect(router.push).toHaveBeenCalledWith('/bible/topic/3801');
+    await fireEvent.press(screen.getByRole('button', { name: /^Forgiveness of sin/ }));
+    expect(router.push).toHaveBeenCalledWith('/bible/dictionary/1200');
+    await fireEvent.press(screen.getByRole('button', { name: 'More Bible results' }));
+    expect(router.push).toHaveBeenCalledWith('/bible/search?q=forgiveness');
+
+    await fireEvent.press(screen.getByRole('button', { name: 'mercy' }));
+    expect(screen.getByDisplayValue('mercy')).toBeTruthy();
   });
 
   it('groups results by type, shows more on demand and tracks only the count', async () => {

@@ -14,7 +14,7 @@ export function SearchEntry({ onPress }: SearchEntryProps) {
     <Pressable
       accessibilityRole="search"
       accessibilityLabel="Search your library"
-      accessibilityHint="Searches journal, prayers, sermons, notes and more"
+      accessibilityHint="Searches the Bible, topics, your journal, prayers, sermons and notes"
       onPress={onPress}
       style={({ pressed }) => [
         styles.field,
@@ -22,7 +22,7 @@ export function SearchEntry({ onPress }: SearchEntryProps) {
       ]}>
       <Icon name="search" size={18} color={colors.textSecondary} />
       <FaithText variant="body" color="textSecondary">
-        Search notes, sermons, prayers…
+        Search the Bible, notes, prayers…
       </FaithText>
     </Pressable>
   );

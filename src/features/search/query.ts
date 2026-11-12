@@ -37,8 +37,28 @@ export function contains(column: SQLiteColumn | SQL, term: string): SQL {
   return sql`${column} LIKE ${`%${escapeLike(term)}%`} ESCAPE '\\'`;
 }
 
-/** Every term must match at least one of the term's conditions (AND of ORs). */
-export function allTermsMatch(terms: readonly string[], conditionsFor: (term: string) => SQL[]): SQL {
-  const perTerm = terms.map((term) => sql`(${sql.join(conditionsFor(term), sql` or `)})`);
+/**
+ * A query term and the words that may stand in for it: `[term, ...synonyms]`.
+ * A plain string is a group of one.
+ */
+export type TermGroup = readonly string[];
+
+/** One group per term: the term plus close synonyms from the concept map ("anxiety" → worry, anxious…). */
+export function expandTerms(terms: readonly string[], synonymsFor: (term: string) => string[]): TermGroup[] {
+  return terms.map((term) => {
+    const synonyms = synonymsFor(term);
+    return synonyms.length > 0 ? synonyms : [term];
+  });
+}
+
+/**
+ * Every term (group) must match at least one condition of at least one of its words
+ * (AND across groups of ORs).
+ */
+export function allTermsMatch(terms: readonly (string | TermGroup)[], conditionsFor: (term: string) => SQL[]): SQL {
+  const perTerm = terms.map((group) => {
+    const words = typeof group === 'string' ? [group] : group;
+    return sql`(${sql.join(words.flatMap(conditionsFor), sql` or `)})`;
+  });
   return sql.join(perTerm, sql` and `);
 }

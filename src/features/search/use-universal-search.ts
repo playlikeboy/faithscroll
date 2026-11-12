@@ -6,6 +6,7 @@ import { useLiveData } from '@/features/library/use-live-data';
 import { logger } from '@/lib/logger';
 import { track } from '@/services/monitoring/analytics';
 
+import { EMPTY_BIBLE_SECTIONS, searchBibleSections, type BibleSections } from './bible-sections';
 import { isSearchable, normalizeQuery } from './query';
 import { searchLibrary, searchMore, searchSavedScripture } from './search-service';
 import type { SearchGroup, SearchResponse, SearchResult, SearchResultType } from './types';
@@ -52,6 +53,11 @@ export interface UniversalSearch {
   /** Groups with any "Show more" pages merged in. */
   groups: SearchGroup[];
   scripture: SearchResult[];
+  /** Concept search over the bundled Bible, topics and dictionary entries. */
+  bible: BibleSections;
+  isSearchingBible: boolean;
+  /** The bundled Bible could not be searched (personal results still work). */
+  bibleError: boolean;
   isSearching: boolean;
   error: Error | undefined;
   loadMore: (type: SearchResultType) => void;
@@ -80,9 +86,20 @@ export function useUniversalSearch(rawQuery: string): UniversalSearch {
     gcTime: 0,
   });
 
+  const bible = useQuery({
+    queryKey: ['library-search', 'bible', query],
+    queryFn: () => searchBibleSections(query),
+    enabled: isSearchable(query),
+    staleTime: Infinity,
+  });
+
   useEffect(() => {
     if (scripture.error) logger.error('Searching saved Scripture failed', scripture.error);
   }, [scripture.error]);
+
+  useEffect(() => {
+    if (bible.error) logger.error('Searching the bundled Bible failed', bible.error);
+  }, [bible.error]);
 
   useEffect(() => {
     if (!response || !query || tracked.current === query) return;
@@ -118,7 +135,10 @@ export function useUniversalSearch(rawQuery: string): UniversalSearch {
     response,
     groups,
     scripture: scripture.data ?? [],
-    isSearching: normalizeQuery(rawQuery) !== query || scripture.isFetching,
+    bible: bible.data && bible.data.query === query ? bible.data : EMPTY_BIBLE_SECTIONS,
+    isSearchingBible: isSearchable(query) && bible.isFetching,
+    bibleError: !!bible.error,
+    isSearching: normalizeQuery(rawQuery) !== query || scripture.isFetching || (isSearchable(query) && bible.isFetching),
     error,
     loadMore,
   };
