@@ -1,10 +1,22 @@
 import { migrate } from 'drizzle-orm/expo-sqlite/migrator';
 import { useEffect, useState } from 'react';
 
+import { seedSampleContentOnce } from '@/features/seed';
+import { logger } from '@/lib/logger';
+
 import { db } from './client';
 import migrations from './migrations/migrations';
 
 let running: Promise<void> | null = null;
+
+/** Seed the labelled sample library on a fresh install (no-op afterwards). Never blocks startup on failure. */
+async function seedFirstLaunch(): Promise<void> {
+  try {
+    await seedSampleContentOnce(db);
+  } catch (error) {
+    logger.error('Seeding sample content failed', error);
+  }
+}
 
 /**
  * Apply pending migrations exactly once per app process.
@@ -15,7 +27,9 @@ let running: Promise<void> | null = null;
  * run. A failed run is cleared so a later call can retry.
  */
 export function runMigrationsOnce(): Promise<void> {
-  running ??= migrate(db, migrations).catch((error: unknown) => {
+  running ??= migrate(db, migrations)
+    .then(() => seedFirstLaunch())
+    .catch((error: unknown) => {
     running = null;
     throw error;
   });
