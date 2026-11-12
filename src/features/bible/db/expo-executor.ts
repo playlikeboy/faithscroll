@@ -2,10 +2,10 @@
  * App-side access to the bundled, read-only Bible database through expo-sqlite.
  *
  * On first use the asset (assets/bible/bible.db) is copied into the SQLite directory under a
- * versioned name (`bible-web-v1.db`), so a build that ships new Bible data under a new name never
- * reuses a stale copy. One connection is opened lazily and shared; it is switched to query-only.
+ * versioned name (`bible-web-v2.db`), so a build that ships new Bible data under a new name never
+ * reuses a stale copy. Copies left by older app versions are deleted to free space. One connection is opened lazily and shared; it is switched to query-only.
  */
-import { importDatabaseFromAssetAsync, openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
+import { deleteDatabaseAsync, importDatabaseFromAssetAsync, openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
 
 import { logger } from '@/lib/logger';
 
@@ -41,15 +41,31 @@ async function openBibleDatabase(): Promise<SQLiteDatabase> {
   return db;
 }
 
+/** Removes copies made by older app versions (bible-web-v1.db …). Missing files are expected. */
+export async function deleteStaleBibleCopies(): Promise<void> {
+  for (let version = 1; version < BIBLE_SCHEMA_VERSION; version += 1) {
+    try {
+      await deleteDatabaseAsync(`bible-web-v${version}.db`);
+    } catch (error) {
+      logger.debug('No stale Bible copy to delete', { version, error: String(error) });
+    }
+  }
+}
+
 let connection: Promise<SQLiteDatabase> | null = null;
 
 function getConnection(): Promise<SQLiteDatabase> {
   if (!connection) {
-    connection = openBibleDatabase().catch((error: unknown) => {
-      connection = null; // allow a later retry
-      logger.error('Could not open the Bible database', error);
-      throw error;
-    });
+    connection = openBibleDatabase()
+      .then((db) => {
+        void deleteStaleBibleCopies();
+        return db;
+      })
+      .catch((error: unknown) => {
+        connection = null; // allow a later retry
+        logger.error('Could not open the Bible database', error);
+        throw error;
+      });
   }
   return connection;
 }

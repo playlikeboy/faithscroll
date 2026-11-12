@@ -11,5 +11,5 @@ export interface BibleQueryExecutor {
 }
 
 /** Bump with the database schema/content version so a new app build replaces the cached copy. */
-export const BIBLE_SCHEMA_VERSION = 1;
+export const BIBLE_SCHEMA_VERSION = 2;
 export const BIBLE_DATABASE_NAME = `bible-web-v${BIBLE_SCHEMA_VERSION}.db`;

@@ -6,6 +6,8 @@
  * Sources (see docs/legal/bible-sources.md):
  *   - World English Bible, USFM, public domain — eBible.org
  *   - Cross references — OpenBible.info, CC-BY
+ *   - Topical data — OpenBible.info, CC-BY
+ *   - Nave's Topical Bible and Easton's Bible Dictionary (1897), public domain — CrossWire SWORD modules
  *
  * Usage:
  *   node scripts/bible/build-bible-db.mjs [--download] [--sources <dir>] [--out <file>] [--max-refs <n>]
@@ -23,16 +25,26 @@ import Database from 'better-sqlite3';
 
 import { BOOKS } from '../../src/features/bible/books.ts';
 import { parseCrossReferences } from './lib/cross-references.mjs';
+import { parseEastonEntries } from './lib/dictionary.mjs';
+import { createStudySchema, insertStudyData } from './lib/study-db.mjs';
+import { readZldModule, zldFilesFrom } from './lib/sword-zld.mjs';
+import { addNaveTopics, addOpenBibleTopics, toTopicRows } from './lib/topics.mjs';
 import { parseUsfmBook } from './lib/usfm.mjs';
-import { readTextEntries } from './lib/zip.mjs';
+import { listEntries, readEntry, readTextEntries } from './lib/zip.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const WEB_URL = 'https://ebible.org/Scriptures/eng-web_usfm.zip';
 const WEB_ZIP = 'eng-web_usfm.zip';
 const XREF_URL = 'https://a.openbible.info/data/cross-references.zip';
 const XREF_ZIP = 'cross-references.zip';
+const TOPICS_URL = 'https://a.openbible.info/data/topic-scores.zip';
+const TOPICS_ZIP = 'topic-scores.zip';
+const NAVE_URL = 'https://www.crosswire.org/ftpmirror/pub/sword/packages/rawzip/Nave.zip';
+const NAVE_ZIP = 'Nave.zip';
+const EASTON_URL = 'https://www.crosswire.org/ftpmirror/pub/sword/packages/rawzip/Easton.zip';
+const EASTON_ZIP = 'Easton.zip';
 const MAX_DOWNLOAD_BYTES = 50 * 1024 * 1024;
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const DEFAULT_MAX_REFS = 15;
 
 function parseArgs(argv) {
@@ -70,11 +82,20 @@ async function ensureSources({ sources, download: shouldDownload }) {
     throw new Error('Source directory must be outside the repository');
   }
   mkdirSync(sources, { recursive: true });
-  const webZip = path.join(sources, WEB_ZIP);
-  const xrefZip = path.join(sources, XREF_ZIP);
-  if (shouldDownload || !existsSync(webZip)) await download(WEB_URL, webZip);
-  if (shouldDownload || !existsSync(xrefZip)) await download(XREF_URL, xrefZip);
-  return { webZip, xrefZip };
+  const files = {
+    webZip: [WEB_URL, WEB_ZIP],
+    xrefZip: [XREF_URL, XREF_ZIP],
+    topicsZip: [TOPICS_URL, TOPICS_ZIP],
+    naveZip: [NAVE_URL, NAVE_ZIP],
+    eastonZip: [EASTON_URL, EASTON_ZIP],
+  };
+  const result = {};
+  for (const [key, [url, name]] of Object.entries(files)) {
+    const file = path.join(sources, name);
+    if (shouldDownload || !existsSync(file)) await download(url, file);
+    result[key] = file;
+  }
+  return result;
 }
 
 /** Parses the 66 Protestant books (deuterocanon, glossary and front matter are skipped). */
@@ -218,14 +239,36 @@ function insertAll(db, rows, references, metadata) {
   db.pragma(`user_version = ${SCHEMA_VERSION}`);
 }
 
-function buildDatabase(out, rows, references, metadata) {
+/** Reads a CrossWire rawzip module (zLD dictionary) from a downloaded archive. */
+function readSwordModule(zipFile) {
+  const buffer = readFileSync(zipFile);
+  const files = new Map(
+    listEntries(buffer)
+      .filter((entry) => entry.name.startsWith('modules/') && !entry.name.endsWith('/'))
+      .map((entry) => [entry.name, readEntry(buffer, entry)]),
+  );
+  return readZldModule(zldFilesFrom(files));
+}
+
+function buildStudyData({ topicsZip, naveZip, eastonZip }, context) {
+  const topics = new Map();
+  const topicText = [...readTextEntries(readFileSync(topicsZip), (name) => name.endsWith('.txt')).values()].join('\n');
+  const openBibleStats = addOpenBibleTopics(topics, topicText, context);
+  const naveStats = addNaveTopics(topics, readSwordModule(naveZip), context);
+  const dictionary = parseEastonEntries(readSwordModule(eastonZip));
+  return { topics: toTopicRows(topics), dictionary, stats: { openBible: openBibleStats, nave: naveStats, easton: dictionary.stats } };
+}
+
+function buildDatabase(out, rows, references, study, metadata) {
   mkdirSync(path.dirname(out), { recursive: true });
   const temporary = `${out}.tmp`;
   rmSync(temporary, { force: true });
   const db = new Database(temporary);
   try {
     createSchema(db);
+    createStudySchema(db);
     insertAll(db, rows, references, metadata);
+    insertStudyData(db, study.topics, study.dictionary.rows);
     db.exec('ANALYZE; VACUUM;');
   } finally {
     db.close();
@@ -235,7 +278,8 @@ function buildDatabase(out, rows, references, metadata) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const { webZip, xrefZip } = await ensureSources(args);
+  const sources = await ensureSources(args);
+  const { webZip, xrefZip } = sources;
 
   const { byCode, warnings } = readBible(webZip);
   const rows = toRows(byCode);
@@ -250,6 +294,11 @@ async function main() {
     verseExists: (id) => verseIds.has(id),
     maxPerVerse: args.maxRefs,
   });
+  const study = buildStudyData(sources, {
+    osisToBookId,
+    lastVerse: (bookId, chapter) => counts[bookId - 1]?.[chapter - 1] ?? 0,
+    verseExists: (id) => verseIds.has(id),
+  });
 
   const metadata = {
     schema_version: SCHEMA_VERSION,
@@ -263,11 +312,21 @@ async function main() {
     cross_references_attribution: 'Cross references from OpenBible.info (https://www.openbible.info/labs/cross-references/), licensed CC-BY.',
     cross_references_source_url: XREF_URL,
     cross_references_max_per_verse: args.maxRefs,
+    topics_license: 'CC-BY (OpenBible.info topical data); Public Domain (Nave’s Topical Bible)',
+    topics_attribution:
+      'Topical data from OpenBible.info (https://www.openbible.info/topics/), licensed CC BY 4.0, merged with Nave’s Topical Bible (public domain).',
+    topics_source_url: `${TOPICS_URL} ${NAVE_URL}`,
+    topic_count: study.topics.topicRows.length,
+    dictionary_name: "Easton's Bible Dictionary (1897)",
+    dictionary_license: 'Public Domain',
+    dictionary_attribution: "Easton's Bible Dictionary, M. G. Easton, 1897 (public domain), via the CrossWire Bible Society.",
+    dictionary_source_url: EASTON_URL,
+    dictionary_entry_count: study.dictionary.rows.length,
     verse_count: rows.length,
     built_at: new Date().toISOString(),
   };
 
-  buildDatabase(args.out, rows, references, metadata);
+  buildDatabase(args.out, rows, references, study, metadata);
   writeVerseCounts(args.countsOut, counts, omitted);
 
   const size = statSync(args.out).size;
@@ -275,6 +334,8 @@ async function main() {
     [
       `verses: ${rows.length}`,
       `cross references: ${JSON.stringify(stats)}`,
+      `topics: ${study.topics.topicRows.length} (${study.topics.verseRows.length} verse links) ${JSON.stringify(study.stats.openBible)} ${JSON.stringify(study.stats.nave)}`,
+      `dictionary: ${study.dictionary.rows.length} entries ${JSON.stringify(study.stats.easton)}`,
       `database: ${args.out} (${(size / 1024 / 1024).toFixed(2)} MB)`,
       `verse counts: ${args.countsOut}`,
       '',

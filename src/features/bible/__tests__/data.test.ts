@@ -11,7 +11,7 @@ import { BOOKS } from '@/features/bible/books';
 import { OMITTED_VERSE_IDS, VERSE_COUNTS } from '@/features/bible/data/verse-counts';
 
 const DB_PATH = path.join(__dirname, '..', '..', '..', '..', 'assets', 'bible', 'bible.db');
-const MAX_DB_BYTES = 25 * 1024 * 1024;
+const MAX_DB_BYTES = 30 * 1024 * 1024;
 const MAX_REFS_PER_VERSE = 15;
 
 let db: Database.Database;
@@ -29,7 +29,7 @@ function textOf(id: number): string | undefined {
 }
 
 describe('bible.db', () => {
-  test('is smaller than 25 MB', () => {
+  test('is smaller than 30 MB', () => {
     expect(fs.statSync(DB_PATH).size).toBeLessThan(MAX_DB_BYTES);
   });
 
@@ -130,6 +130,11 @@ describe('bible.db', () => {
       cross_references_license: 'CC-BY',
     });
     expect(metadata.cross_references_attribution).toContain('OpenBible.info');
+    expect(metadata.schema_version).toBe('2');
+    expect(metadata.topics_attribution).toContain('OpenBible.info');
+    expect(metadata.topics_attribution).toContain('CC BY 4.0');
+    expect(metadata.dictionary_license).toBe('Public Domain');
+    expect(metadata.dictionary_name).toContain('Easton');
     expect(metadata.built_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 });

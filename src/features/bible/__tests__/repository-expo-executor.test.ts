@@ -7,10 +7,12 @@ import type { BibleQueryExecutor } from '@/features/bible/db/executor';
 const mockImport = jest.fn();
 const mockOpen = jest.fn();
 const mockLoggerError = jest.fn();
+const mockDelete = jest.fn();
 
 jest.mock('expo-sqlite', () => ({
   importDatabaseFromAssetAsync: (...args: unknown[]) => mockImport(...args),
   openDatabaseAsync: (...args: unknown[]) => mockOpen(...args),
+  deleteDatabaseAsync: (...args: unknown[]) => mockDelete(...args),
 }));
 
 jest.mock('@/lib/logger', () => ({
@@ -53,10 +55,11 @@ beforeEach(() => {
   mockImport.mockReset().mockResolvedValue(undefined);
   mockOpen.mockReset();
   mockLoggerError.mockReset();
+  mockDelete.mockReset().mockRejectedValue(new Error('not found'));
 });
 
 test('imports the asset once under a versioned name and shares one query-only connection', async () => {
-  const db = fakeDb('1');
+  const db = fakeDb('2');
   mockOpen.mockResolvedValue(db);
   const executor = await loadExecutor();
 
@@ -64,7 +67,7 @@ test('imports the asset once under a versioned name and shares one query-only co
   await expect(executor.getFirst('SELECT 1')).resolves.toEqual({ id: 1 });
 
   expect(mockImport).toHaveBeenCalledTimes(1);
-  expect(mockImport).toHaveBeenCalledWith('bible-web-v1.db', expect.objectContaining({ forceOverwrite: false }));
+  expect(mockImport).toHaveBeenCalledWith('bible-web-v2.db', expect.objectContaining({ forceOverwrite: false }));
   expect(mockOpen).toHaveBeenCalledTimes(1);
   expect(db.execAsync).toHaveBeenCalledWith('PRAGMA query_only = ON');
   expect(db.getAllAsync).toHaveBeenCalledWith('SELECT * FROM verses WHERE id = ?', [1]);
@@ -72,14 +75,14 @@ test('imports the asset once under a versioned name and shares one query-only co
 
 test('replaces a copy that fails validation', async () => {
   const broken = fakeDb(null);
-  const good = fakeDb('1');
+  const good = fakeDb('2');
   mockOpen.mockResolvedValueOnce(broken).mockResolvedValueOnce(good);
   const executor = await loadExecutor();
 
   await executor.getAll('SELECT 1');
 
   expect(broken.closeAsync).toHaveBeenCalled();
-  expect(mockImport).toHaveBeenLastCalledWith('bible-web-v1.db', expect.objectContaining({ forceOverwrite: true }));
+  expect(mockImport).toHaveBeenLastCalledWith('bible-web-v2.db', expect.objectContaining({ forceOverwrite: true }));
   expect(good.getAllAsync).toHaveBeenCalled();
 });
 
@@ -90,6 +93,17 @@ test('reports a friendly error and retries on the next call', async () => {
   await expect(executor.getAll('SELECT 1')).rejects.toThrow('The bundled Bible text could not be opened.');
   expect(mockLoggerError).toHaveBeenCalledWith('Could not open the Bible database', expect.any(Error));
 
-  mockOpen.mockResolvedValueOnce(fakeDb('1'));
+  mockOpen.mockResolvedValueOnce(fakeDb('2'));
   await expect(executor.getAll('SELECT 1')).resolves.toEqual([{ id: 1 }]);
+});
+
+test('deletes copies left by older app versions after opening', async () => {
+  mockOpen.mockResolvedValue(fakeDb('2'));
+  const executor = await loadExecutor();
+
+  await executor.getAll('SELECT 1');
+  await new Promise((resolve) => setImmediate(resolve));
+
+  expect(mockDelete).toHaveBeenCalledWith('bible-web-v1.db');
+  expect(mockDelete).not.toHaveBeenCalledWith('bible-web-v2.db');
 });
