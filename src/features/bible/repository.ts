@@ -96,7 +96,7 @@ function clampInteger(value: number | undefined, fallback: number, min: number, 
 }
 
 /** Verse-id window for the book / testament filters (intersected when both are given). */
-function searchWindow(options: BibleSearchOptions): [number, number] {
+export function searchWindow(options: Pick<BibleSearchOptions, 'bookId' | 'testament'>): [number, number] {
   let firstBook = 1;
   let lastBook = LAST_BOOK;
   if (options.testament === 'OT') lastBook = LAST_OT_BOOK;
